@@ -20,6 +20,7 @@ export interface WorkshopDashboard {
   completed_this_month: number;
   rating_avg: string;
   total_earnings: string;
+  earnings_this_month: string;
   available_technicians: number;
 }
 

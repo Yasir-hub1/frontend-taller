@@ -1,4 +1,4 @@
-import { Component, OnInit, PLATFORM_ID, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, PLATFORM_ID, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter, map } from 'rxjs/operators';
@@ -13,6 +13,7 @@ import { AuthService } from '../../../core/services/auth.service';
 import { Store } from '@ngrx/store';
 import { selectUnreadNotifications } from '../../../store/auth/auth.selectors';
 import { WorkshopOwnerService } from '../services/workshop-owner.service';
+import { WorkshopRealtimeService } from '../services/workshop-realtime.service';
 
 @Component({
   standalone: true,
@@ -251,10 +252,11 @@ import { WorkshopOwnerService } from '../services/workshop-owner.service';
     }
   `,
 })
-export class WorkshopLayoutComponent implements OnInit {
+export class WorkshopLayoutComponent implements OnInit, OnDestroy {
   readonly auth = inject(AuthService);
   private readonly store = inject(Store);
   private readonly workshops = inject(WorkshopOwnerService);
+  private readonly realtime = inject(WorkshopRealtimeService);
   private readonly router = inject(Router);
   private readonly breakpoint = inject(BreakpointObserver);
   private readonly platformId = inject(PLATFORM_ID);
@@ -272,6 +274,7 @@ export class WorkshopLayoutComponent implements OnInit {
 
   ngOnInit() {
     if (!isPlatformBrowser(this.platformId)) return;
+    this.realtime.start();
     this.refreshBanners();
     this.router.events
       .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
@@ -279,6 +282,12 @@ export class WorkshopLayoutComponent implements OnInit {
         if (this.isMobile()) this.sidenavOpen.set(false);
         this.refreshBanners();
       });
+  }
+
+  ngOnDestroy(): void {
+    if (isPlatformBrowser(this.platformId)) {
+      this.realtime.stop();
+    }
   }
 
   onSidenavChange(opened: boolean): void {

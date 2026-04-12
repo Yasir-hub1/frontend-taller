@@ -1,4 +1,4 @@
-import { Component, OnInit, PLATFORM_ID, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, PLATFORM_ID, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -11,6 +11,8 @@ import { PriorityChipComponent } from '../../../shared/components/priority-chip/
 import { DistanceKmPipe } from '../../../shared/pipes/distance.pipe';
 import { TimeAgoPipe } from '../../../shared/pipes/time-ago.pipe';
 import { RejectIncidentDialog } from './reject-incident.dialog';
+import { WorkshopRealtimeService } from '../services/workshop-realtime.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   standalone: true,
@@ -99,6 +101,15 @@ import { RejectIncidentDialog } from './reject-incident.dialog';
               <th mat-header-cell *matHeaderCellDef>Costo</th>
               <td mat-cell *matCellDef="let r">{{ r.service_cost ?? '—' }}</td>
             </ng-container>
+            <ng-container matColumnDef="rating">
+              <th mat-header-cell *matHeaderCellDef>Valoración</th>
+              <td mat-cell *matCellDef="let r">
+                @if (r.rating_score) {
+                  <span class="stars">{{ ratingStars(r.rating_score) }}</span>
+                  <span class="sr-only">{{ r.rating_score }}/5</span>
+                } @else { — }
+              </td>
+            </ng-container>
             <ng-container matColumnDef="act">
               <th mat-header-cell *matHeaderCellDef></th>
               <td mat-cell *matCellDef="let r">
@@ -113,6 +124,8 @@ import { RejectIncidentDialog } from './reject-incident.dialog';
     </mat-tab-group>
   `,
   styles: `
+    .stars { color: #f59e0b; letter-spacing: 1px; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0; }
     .full { width: 100%; }
     .cell-actions { white-space: nowrap; }
     .cell-actions a, .cell-actions button { margin: 2px 0; }
@@ -122,10 +135,12 @@ import { RejectIncidentDialog } from './reject-incident.dialog';
     }
   `,
 })
-export class IncidentListPage implements OnInit {
+export class IncidentListPage implements OnInit, OnDestroy {
   private readonly api = inject(IncidentWebService);
   private readonly dialog = inject(MatDialog);
+  private readonly realtime = inject(WorkshopRealtimeService);
   private readonly platformId = inject(PLATFORM_ID);
+  private rtSub?: Subscription;
 
   tab = 0;
   readonly available = signal<AvailableIncidentRow[]>([]);
@@ -134,12 +149,18 @@ export class IncidentListPage implements OnInit {
 
   colsA = ['id', 'type', 'pri', 'addr', 'when', 'act'];
   colsP = ['id', 'st', 'act'];
-  colsH = ['id', 'st', 'cost', 'act'];
+  colsH = ['id', 'st', 'cost', 'rating', 'act'];
 
   private static readonly ACTIVE = new Set(['accepted', 'in_route', 'arrived', 'in_service']);
 
   ngOnInit() {
-    if (isPlatformBrowser(this.platformId)) this.reload();
+    if (!isPlatformBrowser(this.platformId)) return;
+    this.reload();
+    this.rtSub = this.realtime.userEvent$.subscribe(() => this.reload());
+  }
+
+  ngOnDestroy() {
+    this.rtSub?.unsubscribe();
   }
 
   reload() {
@@ -153,5 +174,11 @@ export class IncidentListPage implements OnInit {
   reject(row: AvailableIncidentRow) {
     const ref = this.dialog.open(RejectIncidentDialog, { data: { id: row.incident_id } });
     ref.afterClosed().subscribe((ok) => ok && this.reload());
+  }
+
+  ratingStars(n: number | null | undefined): string {
+    if (n == null || Number.isNaN(+n)) return '';
+    const k = Math.min(5, Math.max(0, Math.floor(+n)));
+    return '★'.repeat(k);
   }
 }

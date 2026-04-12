@@ -1,15 +1,15 @@
 import { Component, OnDestroy, OnInit, PLATFORM_ID, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { Store } from '@ngrx/store';
-import { Subject } from 'rxjs';
 import { MatCard, MatCardContent } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { NotificationsApiService } from '../services/notifications-api.service';
 import { AppNotification } from '../../../shared/models/notification.model';
 import { TimeAgoPipe } from '../../../shared/pipes/time-ago.pipe';
 import * as AuthActions from '../../../store/auth/auth.actions';
-import { SseService } from '../../../core/services/sse.service';
 import { MessagesService } from '../../../core/services/messages.service';
+import { WorkshopRealtimeService } from '../services/workshop-realtime.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   standalone: true,
@@ -61,25 +61,21 @@ import { MessagesService } from '../../../core/services/messages.service';
 export class NotificationsPage implements OnInit, OnDestroy {
   private readonly api = inject(NotificationsApiService);
   private readonly store = inject(Store);
-  private readonly sse = inject(SseService);
+  private readonly realtime = inject(WorkshopRealtimeService);
   private readonly messages = inject(MessagesService);
   private readonly platformId = inject(PLATFORM_ID);
-  private readonly destroy$ = new Subject<void>();
+  private sub?: Subscription;
 
   readonly items = signal<AppNotification[]>([]);
 
   ngOnInit() {
     if (!isPlatformBrowser(this.platformId)) return;
     this.load();
-    this.sse.listenUserStream(this.destroy$).subscribe({
-      next: () => this.load(),
-      error: () => undefined,
-    });
+    this.sub = this.realtime.userEvent$.subscribe(() => this.load());
   }
 
   ngOnDestroy() {
-    this.destroy$.next();
-    this.destroy$.complete();
+    this.sub?.unsubscribe();
   }
 
   load() {

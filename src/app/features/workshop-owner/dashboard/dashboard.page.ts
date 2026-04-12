@@ -52,6 +52,12 @@ import { MessagesService } from '../../../core/services/messages.service';
       </mat-card>
       <mat-card class="app-stat-card">
         <mat-card-content>
+          <div class="stat-label">Ingresos del mes</div>
+          <div class="stat-value">{{ d()?.earnings_this_month | currencyBo }}</div>
+        </mat-card-content>
+      </mat-card>
+      <mat-card class="app-stat-card">
+        <mat-card-content>
           <div class="stat-label">Calificación</div>
           <div class="stat-value">{{ d()?.rating_avg ?? '—' }}</div>
         </mat-card-content>

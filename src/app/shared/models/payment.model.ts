@@ -35,4 +35,10 @@ export interface GlobalMetrics {
   total_commission_earned: string;
   active_incidents: number;
   completed_incidents: number;
+  resolution_rate_pct: number;
+  avg_assignment_seconds: number | null;
+  commission_this_month: string;
+  platform_rating_avg: number | null;
+  ia_sample_predicted_type: string;
+  ia_sample_confidence: number | null;
 }

@@ -17,4 +17,8 @@ export class NotificationsApiService {
   markAllRead() {
     return this.api.post<{ count: number }>('/api/web/notifications/read-all/', {});
   }
+
+  unreadCount() {
+    return this.api.get<{ unread_count: number }>('/api/web/notifications/unread-count/');
+  }
 }

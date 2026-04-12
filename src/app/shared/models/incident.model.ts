@@ -108,4 +108,6 @@ export interface IncidentHistoryRow {
   offered_at: string;
   accepted_at: string | null;
   completed_at: string | null;
+  rating_score?: number | null;
+  rating_comment?: string | null;
 }
