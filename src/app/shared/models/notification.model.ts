@@ -5,4 +5,6 @@ export interface AppNotification {
   is_read: boolean;
   created_at: string;
   incident?: number | null;
+  notification_type?: string;
+  data?: Record<string, unknown>;
 }

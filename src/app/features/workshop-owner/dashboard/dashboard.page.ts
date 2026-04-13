@@ -1,4 +1,4 @@
-import { Component, OnInit, PLATFORM_ID, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, PLATFORM_ID, computed, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { MatCard, MatCardContent, MatCardHeader, MatCardTitle } from '@angular/material/card';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
@@ -11,6 +11,9 @@ import { CurrencyBoPipe } from '../../../shared/pipes/currency-bo.pipe';
 import { Technician } from '../../../shared/models/workshop.model';
 import { AvailableIncidentRow } from '../../../shared/models/incident.model';
 import { MessagesService } from '../../../core/services/messages.service';
+import { WorkshopRealtimeService } from '../services/workshop-realtime.service';
+import { MatIconModule } from '@angular/material/icon';
+import { Subscription } from 'rxjs';
 
 @Component({
   standalone: true,
@@ -18,7 +21,7 @@ import { MessagesService } from '../../../core/services/messages.service';
   imports: [
     MatCard, MatCardHeader, MatCardTitle, MatCardContent,
     BaseChartDirective, MatSlideToggleModule,
-    CurrencyBoPipe, RouterLink,
+    CurrencyBoPipe, RouterLink, MatIconModule,
   ],
   template: `
     <header class="app-page-head">
@@ -56,10 +59,15 @@ import { MessagesService } from '../../../core/services/messages.service';
           <div class="stat-value">{{ d()?.earnings_this_month | currencyBo }}</div>
         </mat-card-content>
       </mat-card>
-      <mat-card class="app-stat-card">
+      <mat-card class="app-stat-card stat-rating-card">
         <mat-card-content>
           <div class="stat-label">Calificación</div>
-          <div class="stat-value">{{ d()?.rating_avg ?? '—' }}</div>
+          <div class="stars-row" aria-label="Promedio de estrellas">
+            @for (n of [1, 2, 3, 4, 5]; track n) {
+              <mat-icon [class.filled]="n <= ratingRounded()">star</mat-icon>
+            }
+          </div>
+          <div class="stat-value rating-num">{{ ratingAvgDisplay() }}</div>
         </mat-card-content>
       </mat-card>
     </div>
@@ -140,14 +148,36 @@ import { MessagesService } from '../../../core/services/messages.service';
       border-bottom: 1px solid var(--app-border, #e2e8f0);
     }
     .tech:last-child { border-bottom: none; }
+    .stat-rating-card .stars-row {
+      display: flex;
+      gap: 2px;
+      margin: 6px 0 4px;
+      align-items: center;
+    }
+    .stat-rating-card .stars-row mat-icon {
+      font-size: 22px;
+      width: 22px;
+      height: 22px;
+      color: #cbd5e1;
+    }
+    .stat-rating-card .stars-row mat-icon.filled {
+      color: #fbbf24;
+    }
+    .stat-rating-card .rating-num {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--app-text, #0f172a);
+    }
     .tech-name { font-weight: 500; }
   `,
 })
-export class WorkshopDashboardPage implements OnInit {
+export class WorkshopDashboardPage implements OnInit, OnDestroy {
   private readonly api = inject(WorkshopOwnerService);
   private readonly incidents = inject(IncidentWebService);
   private readonly messages = inject(MessagesService);
   private readonly platformId = inject(PLATFORM_ID);
+  private readonly realtime = inject(WorkshopRealtimeService);
+  private rtSub?: Subscription;
 
   readonly d = signal<WorkshopDashboard | null>(null);
   readonly recent = signal<AvailableIncidentRow[]>([]);
@@ -161,8 +191,38 @@ export class WorkshopDashboardPage implements OnInit {
     scales: { x: {}, y: { beginAtZero: true } },
   };
 
+  /** Estrellas rellenas según promedio (redondeado). */
+  readonly ratingRounded = computed(() => {
+    const raw = this.d()?.rating_avg;
+    const v = raw != null && raw !== '' ? Number(raw) : NaN;
+    if (!Number.isFinite(v)) return 0;
+    return Math.min(5, Math.max(0, Math.round(v)));
+  });
+
+  readonly ratingAvgDisplay = computed(() => {
+    const raw = this.d()?.rating_avg;
+    const v = raw != null && raw !== '' ? Number(raw) : NaN;
+    if (!Number.isFinite(v)) return '—';
+    return `${v.toFixed(2)} / 5`;
+  });
+
   ngOnInit() {
-    if (isPlatformBrowser(this.platformId)) this.load();
+    if (!isPlatformBrowser(this.platformId)) return;
+    this.load();
+    this.rtSub = this.realtime.userEvent$.subscribe((raw) => {
+      try {
+        const ev = JSON.parse(raw) as { event?: string };
+        if (ev?.event === 'new_rating') {
+          this.load();
+        }
+      } catch {
+        /* ignore malformed SSE payloads */
+      }
+    });
+  }
+
+  ngOnDestroy() {
+    this.rtSub?.unsubscribe();
   }
 
   private load() {

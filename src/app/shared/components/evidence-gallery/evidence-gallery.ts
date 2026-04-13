@@ -1,20 +1,41 @@
-import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
-import { NgImageSliderModule } from 'ng-image-slider';
+import { CUSTOM_ELEMENTS_SCHEMA, Component, Input, OnChanges, SimpleChanges } from '@angular/core';
+import { register } from 'swiper/element/bundle';
 import { Evidence } from '../../models/incident.model';
 import { mediaUrl } from '../../../core/utils/media-url';
+
+register();
 
 @Component({
   selector: 'app-evidence-gallery',
   standalone: true,
-  imports: [NgImageSliderModule],
+  imports: [],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   template: `
-    @if (imageObjects.length) {
-      <ng-image-slider
-        [images]="imageObjects"
-        [infinite]="false"
-        [autoSlide]="0"
-        [imageSize]="{ width: '100%', height: '220px' }"
-      />
+    @if (imageSlides.length === 1) {
+      <figure class="slide-figure single">
+        <img
+          [src]="imageSlides[0].url"
+          [alt]="imageSlides[0].label"
+          loading="lazy"
+          decoding="async"
+        />
+        @if (imageSlides[0].label) {
+          <figcaption>{{ imageSlides[0].label }}</figcaption>
+        }
+      </figure>
+    } @else if (imageSlides.length > 1) {
+      <swiper-container class="evidence-swiper" pagination="true" navigation="true" slides-per-view="1" space-between="0">
+        @for (slide of imageSlides; track slide.id) {
+          <swiper-slide>
+            <figure class="slide-figure">
+              <img [src]="slide.url" [alt]="slide.label" loading="lazy" decoding="async" />
+              @if (slide.label) {
+                <figcaption>{{ slide.label }}</figcaption>
+              }
+            </figure>
+          </swiper-slide>
+        }
+      </swiper-container>
     }
     @for (ev of audioEvidences; track ev.id) {
       <div class="aud">
@@ -27,6 +48,44 @@ import { mediaUrl } from '../../../core/utils/media-url';
     }
   `,
   styles: `
+    .evidence-swiper {
+      display: block;
+      width: 100%;
+      height: 220px;
+      --swiper-navigation-size: 28px;
+      --swiper-navigation-sides-offset: 6px;
+      --swiper-pagination-bullet-size: 6px;
+    }
+    .slide-figure.single {
+      margin: 0;
+      min-height: 180px;
+    }
+    .slide-figure {
+      margin: 0;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #f0f0f0;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .slide-figure img {
+      width: 100%;
+      height: 100%;
+      max-height: 220px;
+      object-fit: contain;
+      display: block;
+    }
+    .slide-figure figcaption {
+      font-size: 12px;
+      color: #555;
+      padding: 6px 8px 8px;
+      text-align: center;
+      width: 100%;
+      box-sizing: border-box;
+    }
     .aud {
       margin-top: 12px;
       padding: 8px;
@@ -42,17 +101,17 @@ import { mediaUrl } from '../../../core/utils/media-url';
 export class EvidenceGalleryComponent implements OnChanges {
   @Input() evidences: Evidence[] | null | undefined = [];
 
-  imageObjects: { image: string; thumbImage: string; title: string }[] = [];
+  imageSlides: { id: number; url: string; label: string }[] = [];
   audioEvidences: Evidence[] = [];
 
   ngOnChanges(_: SimpleChanges) {
     const list = this.evidences ?? [];
-    this.imageObjects = list
+    this.imageSlides = list
       .filter((e) => e.evidence_type === 'image')
       .map((e) => ({
-        image: mediaUrl(e.file),
-        thumbImage: mediaUrl(e.file),
-        title: e.label || 'Imagen',
+        id: e.id,
+        url: mediaUrl(e.file),
+        label: (e.label || 'Imagen').trim(),
       }));
     this.audioEvidences = list.filter((e) => e.evidence_type === 'audio');
   }

@@ -1,5 +1,7 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, ChangeDetectorRef, OnInit, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
+import { distinctUntilChanged, filter, map } from 'rxjs/operators';
 import { MatCard, MatCardContent, MatCardHeader, MatCardTitle } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormField, MatLabel } from '@angular/material/form-field';
@@ -36,6 +38,11 @@ import { MessagesService } from '../../../core/services/messages.service';
     EvidenceGalleryComponent,
   ],
   template: `
+    @if (loadError) {
+      <p class="muted">{{ loadError }}</p>
+    } @else if (loading && !inc) {
+      <p class="muted">Cargando incidente…</p>
+    }
     @if (inc) {
       <header class="app-page-head head-inc">
         <div class="head-row">
@@ -137,6 +144,11 @@ import { MessagesService } from '../../../core/services/messages.service';
     .status-field {
       min-width: min(100%, 220px);
     }
+    .muted {
+      margin: 0;
+      color: var(--app-text-muted, #64748b);
+      font-size: 0.9375rem;
+    }
   `,
 })
 export class IncidentDetailPage implements OnInit {
@@ -146,58 +158,122 @@ export class IncidentDetailPage implements OnInit {
   private readonly workshopApi = inject(WorkshopOwnerService);
   private readonly dialog = inject(MatDialog);
   private readonly messages = inject(MessagesService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   inc: Incident | null = null;
   ws: Workshop | null = null;
   aiParsed = this.api.parseAISummary(null);
   asg = '';
   nextSt = 'in_route';
+  loading = false;
+  loadError: string | null = null;
 
-  ngOnInit() {
-    const id = Number(this.route.snapshot.paramMap.get('id'));
+  ngOnInit(): void {
+    // Cargar workshop una sola vez al inicializar
     this.workshopApi.getMyWorkshop().subscribe({
-      next: (w) => (this.ws = w),
-      error: () => (this.ws = null),
+      next: (w) => {
+        this.ws = w;
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.ws = null;
+        this.cdr.markForCheck();
+      }
     });
-    this.reload(id);
+
+    // Suscribirse a cambios de ruta
+    this.route.paramMap
+      .pipe(
+        map((p) => Number(p.get('id'))),
+        filter((id) => Number.isFinite(id) && id > 0),
+        distinctUntilChanged(),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((id) => {
+        this.loadError = null;
+        this.reload(id, true);
+      });
   }
 
   num(v: string | number) {
     return Number(v);
   }
 
-  reload(id: number) {
-    this.api.getIncidentDetail(id).subscribe((data) => {
-      this.inc = data;
-      this.aiParsed =
-        data.ai_summary_parsed ?? this.api.parseAISummary(data.ai_summary ?? null);
-      this.asg = (data.assignment?.status as string) || '';
+  reload(id: number, clearView = false) {
+    if (clearView) {
+      this.inc = null;
+      this.loading = true;
+      this.cdr.markForCheck();
+    }
+
+    this.api.getIncidentDetail(id).subscribe({
+      next: (data) => {
+        this.loading = false;
+        this.inc = data;
+        this.aiParsed =
+          data.ai_summary_parsed ?? this.api.parseAISummary(data.ai_summary ?? null);
+        this.asg = (data.assignment?.status as string) || '';
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        console.error('Error loading incident:', err);
+        this.loading = false;
+        const msg = err.error?.error || 'No puedes acceder a este incidente o no existe';
+        this.messages.error(msg);
+        this.loadError = msg;
+        this.cdr.markForCheck();
+
+        // Navegar después de que el mensaje se haya mostrado
+        setTimeout(() => {
+          void this.router.navigate(['/taller/incidentes']);
+        }, 100);
+      },
     });
   }
 
   openAccept() {
     if (!this.inc) return;
     const ref = this.dialog.open(AcceptIncidentDialog, { data: { incidentId: this.inc.id } });
-    ref.afterClosed().subscribe((ok) => ok && this.reload(this.inc!.id));
+    ref.afterClosed().subscribe((ok) => {
+      if (ok && this.inc) {
+        this.reload(this.inc.id, false);
+      }
+    });
   }
 
   openReject() {
     if (!this.inc) return;
     const ref = this.dialog.open(RejectIncidentDialog, { data: { id: this.inc.id } });
-    ref.afterClosed().subscribe((ok) => ok && void this.router.navigate(['/taller/incidentes']));
+    ref.afterClosed().subscribe((ok) => {
+      if (ok) {
+        void this.router.navigate(['/taller/incidentes']);
+      }
+    });
   }
 
   patchStatus() {
     if (!this.inc) return;
-    this.api.updateStatus(this.inc.id, this.nextSt as 'in_route' | 'arrived' | 'in_service').subscribe(() => {
-      this.messages.success('Estado actualizado');
-      this.reload(this.inc!.id);
+    this.api.updateStatus(this.inc.id, this.nextSt as 'in_route' | 'arrived' | 'in_service').subscribe({
+      next: () => {
+        this.messages.success('Estado actualizado');
+        if (this.inc) {
+          this.reload(this.inc.id, false);
+        }
+      },
+      error: (err) => {
+        this.messages.error(err.error?.error || 'Error al actualizar estado');
+      }
     });
   }
 
   openComplete() {
     if (!this.inc) return;
     const ref = this.dialog.open(CompleteIncidentDialog, { data: { incidentId: this.inc.id } });
-    ref.afterClosed().subscribe((ok) => ok && void this.router.navigate(['/taller/incidentes']));
+    ref.afterClosed().subscribe((ok) => {
+      if (ok) {
+        void this.router.navigate(['/taller/incidentes']);
+      }
+    });
   }
 }

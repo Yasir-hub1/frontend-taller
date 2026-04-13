@@ -1,10 +1,13 @@
+import { isPlatformBrowser } from '@angular/common';
 import {
   AfterViewInit,
   Component,
   ElementRef,
   Input,
   OnDestroy,
+  PLATFORM_ID,
   ViewChild,
+  inject,
 } from '@angular/core';
 import * as L from 'leaflet';
 
@@ -21,6 +24,8 @@ import * as L from 'leaflet';
   `,
 })
 export class MapViewComponent implements AfterViewInit, OnDestroy {
+  private readonly platformId = inject(PLATFORM_ID);
+
   @ViewChild('mapEl') mapEl!: ElementRef<HTMLDivElement>;
 
   @Input() incidentLat = 0;
@@ -31,6 +36,9 @@ export class MapViewComponent implements AfterViewInit, OnDestroy {
   private map: L.Map | null = null;
 
   ngAfterViewInit() {
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
     fixLeafletIcons();
     const lat = Number(this.incidentLat);
     const lng = Number(this.incidentLng);

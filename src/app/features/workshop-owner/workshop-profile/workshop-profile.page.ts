@@ -6,6 +6,7 @@ import { MatFormField, MatLabel } from '@angular/material/form-field';
 import { MatInput } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSelectModule } from '@angular/material/select';
+import { MatIconModule } from '@angular/material/icon';
 import { WorkshopOwnerService } from '../services/workshop-owner.service';
 import { Workshop, ServiceCategory } from '../../../shared/models/workshop.model';
 import {
@@ -41,6 +42,7 @@ const CATS: ServiceCategory[] = [
     MatInput,
     MatButtonModule,
     MatSelectModule,
+    MatIconModule,
     WorkshopLocationPickerComponent,
   ],
   template: `
@@ -53,6 +55,15 @@ const CATS: ServiceCategory[] = [
         <p class="status-chip" [class.ok]="workshop.is_verified">
           {{ workshop.is_verified ? 'Verificado' : 'Pendiente de verificación' }}
         </p>
+        <div class="profile-rating-row">
+          <span class="profile-rating-label">Valoración</span>
+          <div class="stars-inline" [attr.aria-label]="'Promedio ' + ratingAvgLabel(workshop)">
+            @for (n of [1, 2, 3, 4, 5]; track n) {
+              <mat-icon [class.filled]="n <= ratingRoundedFor(workshop)">star</mat-icon>
+            }
+          </div>
+          <span class="profile-rating-num">{{ ratingAvgLabel(workshop) }}</span>
+        </div>
       }
     </header>
     @if (route.snapshot.queryParamMap.get('pending') === 'verification') {
@@ -199,6 +210,39 @@ const CATS: ServiceCategory[] = [
     .status-chip.ok {
       background: var(--app-accent-soft, #ccfbf1);
       color: var(--app-accent-hover, #0f766e);
+    }
+    .profile-rating-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem 0.75rem;
+      margin-top: 0.65rem;
+    }
+    .profile-rating-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--app-text-muted, #64748b);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .stars-inline {
+      display: flex;
+      gap: 2px;
+      align-items: center;
+    }
+    .stars-inline mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+      color: #cbd5e1;
+    }
+    .stars-inline mat-icon.filled {
+      color: #fbbf24;
+    }
+    .profile-rating-num {
+      font-size: 0.9375rem;
+      font-weight: 700;
+      color: var(--app-text, #0f172a);
     }
     .alert-inline {
       padding: 0.5rem 0.75rem;
@@ -411,6 +455,18 @@ export class WorkshopProfilePage implements OnInit, OnDestroy {
   logoPreviewUrl: string | null = null;
   /** Se incrementa para que el mapa centre y muestre las coords del formulario (guardado, GPS, carga API). */
   mapFitTrigger = 0;
+
+  ratingRoundedFor(w: Workshop): number {
+    const v = Number(w.rating_avg);
+    if (!Number.isFinite(v)) return 0;
+    return Math.min(5, Math.max(0, Math.round(v)));
+  }
+
+  ratingAvgLabel(w: Workshop): string {
+    const v = Number(w.rating_avg);
+    if (!Number.isFinite(v)) return '—';
+    return `${v.toFixed(2)} / 5`;
+  }
 
   form = this.fb.nonNullable.group({
     name: ['', Validators.required],
