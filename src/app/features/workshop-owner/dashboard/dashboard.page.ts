@@ -71,20 +71,22 @@ import { Subscription } from 'rxjs';
         </mat-card-content>
       </mat-card>
     </div>
-    <div class="charts">
-      <mat-card class="ch app-surface-card">
-        <mat-card-header><mat-card-title>Cola vs activos vs mes</mat-card-title></mat-card-header>
-        <mat-card-content>
-          <canvas baseChart [data]="donutData()" [type]="'doughnut'" [options]="donutOpts"></canvas>
-        </mat-card-content>
-      </mat-card>
-      <mat-card class="ch app-surface-card">
-        <mat-card-header><mat-card-title>Últimos pagos netos</mat-card-title></mat-card-header>
-        <mat-card-content>
-          <canvas baseChart [data]="barData()" [type]="'bar'" [options]="barOpts"></canvas>
-        </mat-card-content>
-      </mat-card>
-    </div>
+    @if (isBrowser) {
+      <div class="charts">
+        <mat-card class="ch app-surface-card">
+          <mat-card-header><mat-card-title>Cola vs activos vs mes</mat-card-title></mat-card-header>
+          <mat-card-content>
+            <canvas baseChart [data]="donutData()" [type]="'doughnut'" [options]="donutOpts"></canvas>
+          </mat-card-content>
+        </mat-card>
+        <mat-card class="ch app-surface-card">
+          <mat-card-header><mat-card-title>Últimos pagos netos</mat-card-title></mat-card-header>
+          <mat-card-content>
+            <canvas baseChart [data]="barData()" [type]="'bar'" [options]="barOpts"></canvas>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    }
     @if (recent().length > 0) {
       <mat-card class="mt app-surface-card">
         <mat-card-header><mat-card-title>Últimas ofertas</mat-card-title></mat-card-header>
@@ -177,6 +179,8 @@ export class WorkshopDashboardPage implements OnInit, OnDestroy {
   private readonly messages = inject(MessagesService);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly realtime = inject(WorkshopRealtimeService);
+  /** Chart.js/ng2-charts usan canvas: no existen en SSR (NotYetImplemented). */
+  readonly isBrowser = isPlatformBrowser(this.platformId);
   private rtSub?: Subscription;
 
   readonly d = signal<WorkshopDashboard | null>(null);

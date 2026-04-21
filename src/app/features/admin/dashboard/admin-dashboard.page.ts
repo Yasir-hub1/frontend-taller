@@ -90,12 +90,14 @@ import { GlobalMetrics } from '../../../shared/models/payment.model';
           </mat-card-content>
         </mat-card>
       </div>
-      <mat-card class="mt app-surface-card">
-        <mat-card-header><mat-card-title>Resumen operativo</mat-card-title></mat-card-header>
-        <mat-card-content>
-          <canvas baseChart [data]="barData()" [type]="'bar'" [options]="barOpts"></canvas>
-        </mat-card-content>
-      </mat-card>
+      @if (isBrowser) {
+        <mat-card class="mt app-surface-card">
+          <mat-card-header><mat-card-title>Resumen operativo</mat-card-title></mat-card-header>
+          <mat-card-content>
+            <canvas baseChart [data]="barData()" [type]="'bar'" [options]="barOpts"></canvas>
+          </mat-card-content>
+        </mat-card>
+      }
     }
   `,
   styles: `
@@ -117,6 +119,7 @@ import { GlobalMetrics } from '../../../shared/models/payment.model';
 export class AdminDashboardPage implements OnInit {
   private readonly api = inject(AdminService);
   private readonly platformId = inject(PLATFORM_ID);
+  readonly isBrowser = isPlatformBrowser(this.platformId);
 
   readonly m = signal<GlobalMetrics | null>(null);
   readonly barData = signal<ChartConfiguration<'bar'>['data']>({ labels: [], datasets: [] });

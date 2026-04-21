@@ -87,7 +87,7 @@ export class WorkshopOwnerService {
       .pipe(map(unwrapTechnicianList));
   }
 
-  createTechnician(data: FormData | Partial<Technician>) {
+  createTechnician(data: FormData | (Partial<Technician> & Record<string, unknown>)) {
     if (data instanceof FormData) {
       return this.api.postForm<Technician>('/api/web/workshop/technicians/', data);
     }
@@ -106,6 +106,19 @@ export class WorkshopOwnerService {
     return this.api.patch<Technician>(`/api/web/workshop/technicians/${id}/availability/`, {
       is_available,
     });
+  }
+
+  /** Crear usuario técnico (app móvil) para un técnico que aún no tiene cuenta. */
+  createTechnicianAppAccess(
+    id: number,
+    body: {
+      app_username: string;
+      app_email: string;
+      app_password: string;
+      app_password_confirm: string;
+    },
+  ) {
+    return this.api.post<Technician>(`/api/web/workshop/technicians/${id}/app-access/`, body);
   }
 
   getWorkshopEarnings() {

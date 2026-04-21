@@ -8,6 +8,7 @@ import { WorkshopOwnerService } from '../services/workshop-owner.service';
 import { Technician } from '../../../shared/models/workshop.model';
 import { MapViewComponent } from '../../../shared/components/map-view/map-view';
 import { TechnicianFormDialog } from './technician-form.dialog';
+import { TechnicianAppAccessDialog } from './technician-app-access.dialog';
 import { MessagesService } from '../../../core/services/messages.service';
 
 @Component({
@@ -41,6 +42,16 @@ import { MessagesService } from '../../../core/services/messages.service';
           <th mat-header-cell *matHeaderCellDef>Disponible</th>
           <td mat-cell *matCellDef="let t">
             <mat-slide-toggle [checked]="t.is_available" (change)="toggle(t, $event.checked)" />
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="app">
+          <th mat-header-cell *matHeaderCellDef>App móvil</th>
+          <td mat-cell *matCellDef="let t">
+            @if (t.has_app_access) {
+              <span class="app-ok">Activo · {{ t.app_username }}</span>
+            } @else {
+              <button mat-stroked-button color="primary" (click)="openAppAccess(t)">Dar acceso</button>
+            }
           </td>
         </ng-container>
         <ng-container matColumnDef="del">
@@ -92,6 +103,11 @@ import { MessagesService } from '../../../core/services/messages.service';
       gap: 1rem;
     }
     .mc p { font-weight: 600; font-size: 0.9rem; }
+    .app-ok {
+      font-size: 0.85rem;
+      color: #0f766e;
+      font-weight: 600;
+    }
   `,
 })
 export class TechnicianListPage implements OnInit {
@@ -104,7 +120,7 @@ export class TechnicianListPage implements OnInit {
   readonly withLoc = computed(() =>
     this.rows().filter((t) => t.current_latitude != null && t.current_longitude != null),
   );
-  cols = ['name', 'phone', 'spec', 'av', 'del'];
+  cols = ['name', 'phone', 'spec', 'av', 'app', 'del'];
 
   ngOnInit() {
     if (isPlatformBrowser(this.platformId)) this.load();
@@ -135,10 +151,22 @@ export class TechnicianListPage implements OnInit {
 
   add() {
     const ref = this.dialog.open(TechnicianFormDialog, {
-      width: 'min(480px, 96vw)',
+      width: 'min(520px, 96vw)',
       maxWidth: '96vw',
       maxHeight: '90vh',
       panelClass: 'app-dialog-panel',
+      autoFocus: 'first-tabbable',
+      restoreFocus: true,
+    });
+    ref.afterClosed().subscribe((ok) => ok && this.load());
+  }
+
+  openAppAccess(t: Technician) {
+    const ref = this.dialog.open(TechnicianAppAccessDialog, {
+      width: 'min(460px, 96vw)',
+      maxWidth: '96vw',
+      panelClass: 'app-dialog-panel',
+      data: { technician: t },
       autoFocus: 'first-tabbable',
       restoreFocus: true,
     });

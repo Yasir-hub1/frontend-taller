@@ -37,4 +37,7 @@ export interface Technician {
   current_latitude: string | number | null;
   current_longitude: string | number | null;
   photo: string | null;
+  /** API: cuenta vinculada para la app móvil */
+  has_app_access?: boolean;
+  app_username?: string | null;
 }

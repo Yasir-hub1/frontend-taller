@@ -13,6 +13,7 @@ import { MatInput } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSelectModule } from '@angular/material/select';
 import { MatOptionModule } from '@angular/material/core';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { WorkshopOwnerService } from '../services/workshop-owner.service';
 import { ServiceCategory } from '../../../shared/models/workshop.model';
 import { MessagesService } from '../../../core/services/messages.service';
@@ -43,6 +44,7 @@ const CATS: ServiceCategory[] = [
     MatButtonModule,
     MatSelectModule,
     MatOptionModule,
+    MatSlideToggleModule,
   ],
   template: `
     <h2 mat-dialog-title>Nuevo técnico</h2>
@@ -63,6 +65,43 @@ const CATS: ServiceCategory[] = [
           }
         </mat-select>
       </mat-form-field>
+
+      <div class="app-access-block">
+        <mat-slide-toggle [formControl]="form.controls.enableAppAccess" color="primary">
+          Habilitar acceso a la app móvil
+        </mat-slide-toggle>
+        <p class="app-hint">
+          Se crea un usuario con rol técnico para que ingrese desde la app (misma que usan los clientes).
+        </p>
+        @if (form.controls.enableAppAccess.value) {
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Usuario (login)</mat-label>
+            <input matInput [formControl]="form.controls.app_username" autocomplete="off" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Email</mat-label>
+            <input matInput [formControl]="form.controls.app_email" type="email" autocomplete="off" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Contraseña</mat-label>
+            <input
+              matInput
+              [formControl]="form.controls.app_password"
+              type="password"
+              autocomplete="new-password"
+            />
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Confirmar contraseña</mat-label>
+            <input
+              matInput
+              [formControl]="form.controls.app_password_confirm"
+              type="password"
+              autocomplete="new-password"
+            />
+          </mat-form-field>
+        }
+      </div>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-button mat-dialog-close type="button">Cancelar</button>
@@ -84,6 +123,20 @@ const CATS: ServiceCategory[] = [
     .full {
       width: 100%;
     }
+    .app-access-block {
+      margin-top: 0.75rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--app-border, #e2e8f0);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .app-hint {
+      font-size: 0.8rem;
+      color: var(--app-muted, #64748b);
+      margin: 0.25rem 0 0.5rem;
+      line-height: 1.35;
+    }
   `,
 })
 export class TechnicianFormDialog {
@@ -98,21 +151,60 @@ export class TechnicianFormDialog {
     name: ['', Validators.required],
     phone: ['', Validators.required],
     specialties: [[] as ServiceCategory[]],
+    enableAppAccess: [false],
+    app_username: [''],
+    app_email: [''],
+    app_password: [''],
+    app_password_confirm: [''],
   });
 
   save() {
-    if (this.messages.showFormValidationWarning(this.form)) return;
+    const appKeys = ['app_username', 'app_email', 'app_password', 'app_password_confirm'] as const;
+    for (const k of appKeys) {
+      const c = this.form.controls[k];
+      c.clearValidators();
+      c.updateValueAndValidity({ emitEvent: false });
+    }
+
     const v = this.form.getRawValue();
-    this.api
-      .createTechnician({
-        name: v.name,
-        phone: v.phone,
-        specialties: v.specialties ?? [],
-        is_available: true,
-      })
-      .subscribe(() => {
-        this.messages.success('Técnico registrado');
+    if (v.enableAppAccess) {
+      this.form.controls.app_username.setValidators([Validators.required]);
+      this.form.controls.app_email.setValidators([Validators.required, Validators.email]);
+      this.form.controls.app_password.setValidators([Validators.required, Validators.minLength(6)]);
+      this.form.controls.app_password_confirm.setValidators([Validators.required]);
+      for (const k of appKeys) {
+        this.form.controls[k].updateValueAndValidity({ emitEvent: false });
+      }
+    }
+    if (this.messages.showFormValidationWarning(this.form)) return;
+
+    if (v.enableAppAccess && v.app_password !== v.app_password_confirm) {
+      this.messages.error('Las contraseñas no coinciden');
+      return;
+    }
+
+    const payload: Record<string, unknown> = {
+      name: v.name,
+      phone: v.phone,
+      specialties: v.specialties ?? [],
+      is_available: true,
+      enable_app_access: v.enableAppAccess,
+    };
+    if (v.enableAppAccess) {
+      payload['app_username'] = v.app_username.trim();
+      payload['app_email'] = v.app_email.trim();
+      payload['app_password'] = v.app_password;
+      payload['app_password_confirm'] = v.app_password_confirm;
+    }
+
+    this.api.createTechnician(payload).subscribe({
+      next: () => {
+        this.messages.success(
+          v.enableAppAccess ? 'Técnico registrado con acceso a la app' : 'Técnico registrado',
+        );
         this.ref.close(true);
-      });
+      },
+      error: (err) => this.messages.error(this.messages.parseHttpErrorPayload(err)),
+    });
   }
 }
