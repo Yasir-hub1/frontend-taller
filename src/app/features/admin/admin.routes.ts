@@ -45,6 +45,10 @@ export const ADMIN_ROUTES: Routes = [
         path: 'pagos',
         loadComponent: () => import('./payments/all-payments.page').then((m) => m.AllPaymentsPage),
       },
+      {
+        path: 'reportes',
+        loadComponent: () => import('./reports/admin-reports.page').then((m) => m.AdminReportsPage),
+      },
     ],
   },
 ];

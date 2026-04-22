@@ -1,10 +1,10 @@
 export type ServiceCategory =
-  | 'battery'
-  | 'tire'
-  | 'towing'
-  | 'engine'
-  | 'accident'
-  | 'locksmith'
+  | 'bateria'
+  | 'llanta'
+  | 'remolque'
+  | 'motor'
+  | 'accidente'
+  | 'cerrajeria'
   | 'general';
 
 export interface Workshop {

@@ -36,6 +36,24 @@ export class ApiService {
     return this.http.delete<T>(`${this.base}${path}`);
   }
 
+  getBlob(
+    path: string,
+    params?: Record<string, string | number | boolean | undefined>,
+  ): Observable<Blob> {
+    let httpParams = new HttpParams();
+    if (params) {
+      for (const [k, v] of Object.entries(params)) {
+        if (v !== undefined && v !== null && v !== '') {
+          httpParams = httpParams.set(k, String(v));
+        }
+      }
+    }
+    return this.http.get(`${this.base}${path}`, {
+      params: httpParams,
+      responseType: 'blob',
+    });
+  }
+
   postForm<T>(path: string, formData: FormData): Observable<T> {
     return this.http.post<T>(`${this.base}${path}`, formData);
   }

@@ -5,6 +5,7 @@ import { User } from '../../../shared/models/user.model';
 import { Workshop } from '../../../shared/models/workshop.model';
 import { CommissionConfig, GlobalMetrics, Payment } from '../../../shared/models/payment.model';
 import { Incident } from '../../../shared/models/incident.model';
+import { AdminReportsPayload } from '../../../shared/models/admin-reports.model';
 
 @Injectable({ providedIn: 'root' })
 export class AdminService {
@@ -56,5 +57,13 @@ export class AdminService {
 
   getIncident(id: number) {
     return this.api.get<Incident>(`/api/admin-api/incidents/${id}/`);
+  }
+
+  getReportsSummary(params?: Record<string, string>) {
+    return this.api.get<AdminReportsPayload>('/api/admin-api/reports/', params);
+  }
+
+  downloadReportsExcel(params?: Record<string, string>) {
+    return this.api.getBlob('/api/admin-api/reports/export/', params);
   }
 }

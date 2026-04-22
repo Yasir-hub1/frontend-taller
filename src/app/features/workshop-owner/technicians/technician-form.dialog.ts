@@ -19,12 +19,12 @@ import { ServiceCategory } from '../../../shared/models/workshop.model';
 import { MessagesService } from '../../../core/services/messages.service';
 
 const CATS: ServiceCategory[] = [
-  'battery',
-  'tire',
-  'towing',
-  'engine',
-  'accident',
-  'locksmith',
+  'bateria',
+  'llanta',
+  'remolque',
+  'motor',
+  'accidente',
+  'cerrajeria',
   'general',
 ];
 

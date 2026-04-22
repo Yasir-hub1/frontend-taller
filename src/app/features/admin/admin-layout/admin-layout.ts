@@ -64,6 +64,10 @@ import { AuthService } from '../../../core/services/auth.service';
             <mat-icon matListItemIcon>account_balance_wallet</mat-icon>
             <span matListItemTitle>Pagos</span>
           </a>
+          <a mat-list-item routerLink="/admin/reportes" routerLinkActive="active" (click)="closeNavMobile()">
+            <mat-icon matListItemIcon>assessment</mat-icon>
+            <span matListItemTitle>Reportes</span>
+          </a>
         </mat-nav-list>
       </mat-sidenav>
       <mat-sidenav-content class="main">
