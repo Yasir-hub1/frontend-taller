@@ -179,7 +179,7 @@ const CATS: ServiceCategory[] = [
         </form>
       </mat-card-content>
     </mat-card>
-    <mat-card class="mt app-surface-card stripe-card profile-stripe">
+    <!-- <mat-card class="mt app-surface-card stripe-card profile-stripe">
       <mat-card-header><mat-card-title>Pagos (Stripe)</mat-card-title></mat-card-header>
       <mat-card-content>
         <p class="muted">
@@ -187,7 +187,7 @@ const CATS: ServiceCategory[] = [
           <code>environment.stripePublishableKey</code> en el front.
         </p>
       </mat-card-content>
-    </mat-card>
+    </mat-card> -->
   `,
   styles: `
     .profile-head {

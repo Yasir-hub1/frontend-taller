@@ -30,7 +30,7 @@ import { asPaged } from '../utils/paginated-response.util';
           </ng-container>
           <ng-container matColumnDef="role">
             <th mat-header-cell *matHeaderCellDef>Rol</th>
-            <td mat-cell *matCellDef="let u">{{ u.role }}</td>
+            <td mat-cell *matCellDef="let u">{{ roleLabel(u.role) }}</td>
           </ng-container>
           <ng-container matColumnDef="mail">
             <th mat-header-cell *matHeaderCellDef>Email</th>
@@ -69,6 +69,17 @@ export class UsersManagementPage implements OnInit {
   pageSize = 20;
   pageIndex = 0;
   cols = ['id', 'user', 'role', 'mail', 'act'];
+
+  /** Etiquetas alineadas con apps.users.models.Role (backend). */
+  roleLabel(role: string | undefined): string {
+    const map: Record<string, string> = {
+      admin: 'Administrador',
+      workshop_owner: 'Dueño de taller',
+      client: 'Cliente',
+      technician: 'Técnico',
+    };
+    return role && map[role] ? map[role] : role ?? '—';
+  }
 
   ngOnInit() {
     if (isPlatformBrowser(this.platformId)) this.load();
