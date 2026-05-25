@@ -8,6 +8,7 @@ import { StorageService } from './storage.service';
 import { environment } from '../../../environments/environment';
 import * as AuthActions from '../../store/auth/auth.actions';
 import { selectUser } from '../../store/auth/auth.selectors';
+import { PanelNotificationsApiService } from './panel-notifications-api.service';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -15,6 +16,7 @@ export class AuthService {
   private readonly router = inject(Router);
   private readonly storage = inject(StorageService);
   private readonly store = inject(Store);
+  private readonly notificationsApi = inject(PanelNotificationsApiService);
 
   readonly currentUser = this.store.selectSignal(selectUser);
   readonly isAuthenticated = computed(() => this.currentUser() !== null);
@@ -31,6 +33,7 @@ export class AuthService {
           this.storage.set('access_token', res.tokens.access);
           this.storage.set('refresh_token', res.tokens.refresh);
           this.store.dispatch(AuthActions.setUser({ user: res.user }));
+          this.syncUnreadBadge();
           this.redirectByRole(res.user.role);
         }),
       );
@@ -44,9 +47,18 @@ export class AuthService {
           this.storage.set('access_token', res.tokens.access);
           this.storage.set('refresh_token', res.tokens.refresh);
           this.store.dispatch(AuthActions.setUser({ user: res.user }));
+          this.syncUnreadBadge();
           this.redirectByRole(res.user.role);
         }),
       );
+  }
+
+  private syncUnreadBadge(): void {
+    this.notificationsApi.unreadCount().subscribe({
+      next: (r) =>
+        this.store.dispatch(AuthActions.setUnreadNotifications({ count: r.unread_count })),
+      error: () => undefined,
+    });
   }
 
   private redirectByRole(role: string) {
@@ -65,7 +77,10 @@ export class AuthService {
     const token = this.storage.get('access_token');
     if (!token) return;
     this.http.get<User>(`${this.api}/api/web/auth/profile/`).subscribe({
-      next: (user) => this.store.dispatch(AuthActions.setUser({ user })),
+      next: (user) => {
+        this.store.dispatch(AuthActions.setUser({ user }));
+        this.syncUnreadBadge();
+      },
       error: () => this.logout(),
     });
   }

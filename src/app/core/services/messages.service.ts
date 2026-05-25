@@ -2,6 +2,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { Injectable, PLATFORM_ID, inject } from '@angular/core';
 import { AbstractControl, FormArray, FormGroup } from '@angular/forms';
 import Swal from 'sweetalert2';
+import { isQueuedResult } from '../models/offline.model';
 
 const toastBase = {
   toast: true,
@@ -63,6 +64,40 @@ export class MessagesService {
   info(text: string): void {
     if (!this.inBrowser()) return;
     void Swal.fire({ ...toastBase, icon: 'info', title: text });
+  }
+
+  /** Toast visible para alertas en tiempo real (SSE / push). */
+  notify(title: string, detail?: string): void {
+    if (!this.inBrowser()) return;
+    const fullTitle = detail ? `${title}` : title;
+    const html = detail
+      ? `<p style="margin:0.35rem 0 0;font-size:0.875rem;font-weight:500;text-align:left;">${this.escapeHtml(detail)}</p>`
+      : undefined;
+    void Swal.fire({
+      ...toastBase,
+      icon: 'info',
+      title: fullTitle,
+      html,
+      timer: 5500,
+      toast: true,
+      position: 'top-end',
+      showConfirmButton: false,
+      customClass: {
+        popup: 'app-notif-toast',
+        title: 'app-notif-toast-title',
+      },
+      didOpen: (toast) => {
+        toast.style.zIndex = '1300';
+      },
+    });
+  }
+
+  private escapeHtml(text: string): string {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
   }
 
   /** Texto legible a partir de cuerpos típicos de Django REST / JSON. */
@@ -171,5 +206,14 @@ export class MessagesService {
       else out.push(`${label}: no válido`);
     }
     return out;
+  }
+
+  /** Mensaje de éxito según si la acción quedó en cola offline o se aplicó al instante. */
+  mutationSuccess(result: unknown, onlineMessage: string): void {
+    if (isQueuedResult(result)) {
+      this.success('Sin conexión: acción guardada. Se enviará al recuperar internet.');
+      return;
+    }
+    this.success(onlineMessage);
   }
 }

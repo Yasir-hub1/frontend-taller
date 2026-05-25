@@ -119,8 +119,8 @@ export class TechnicianAppAccessDialog {
         app_password_confirm: v.app_password_confirm,
       })
       .subscribe({
-        next: () => {
-          this.messages.success('Cuenta de app creada. El técnico ya puede iniciar sesión.');
+        next: (res) => {
+          this.messages.mutationSuccess(res, 'Cuenta de app creada. El técnico ya puede iniciar sesión.');
           this.ref.close(true);
         },
         error: (err) => this.messages.error(this.messages.parseHttpErrorPayload(err)),

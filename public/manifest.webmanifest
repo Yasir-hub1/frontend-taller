@@ -1,0 +1,17 @@
+{
+  "name": "Emergencias Vehiculares — Taller",
+  "short_name": "Taller",
+  "description": "Panel de taller con soporte offline para incidentes",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#0d9488",
+  "lang": "es",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "48x48",
+      "type": "image/x-icon"
+    }
+  ]
+}

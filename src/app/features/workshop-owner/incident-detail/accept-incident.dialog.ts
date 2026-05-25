@@ -81,8 +81,8 @@ export class AcceptIncidentDialog implements OnInit {
         technician_id: tid,
         estimated_arrival_minutes: eta ?? undefined,
       })
-      .subscribe(() => {
-        this.messages.success('Incidente aceptado');
+      .subscribe((res) => {
+        this.messages.mutationSuccess(res, 'Incidente aceptado');
         this.ref.close(true);
       });
   }

@@ -1,169 +1,135 @@
-import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { Injectable, PLATFORM_ID, inject } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { firstValueFrom } from 'rxjs';
+import { ApiService } from './api.service';
 import { environment } from '../../../environments/environment';
 
-/**
- * Servicio para gestionar notificaciones push web usando Firebase Cloud Messaging.
- *
- * IMPORTANTE: Para que funcione, necesitas:
- * 1. Instalar Firebase: npm install firebase
- * 2. Crear firebase-messaging-sw.js en src/ (service worker)
- * 3. Configurar Firebase en el proyecto
- */
+/** Convierte clave VAPID base64url a Uint8Array para PushManager. */
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(base64);
+  const out = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; ++i) out[i] = raw.charCodeAt(i);
+  return out;
+}
+
+export interface WebPushPayload {
+  title: string;
+  body: string;
+  data?: Record<string, unknown>;
+}
+
 @Injectable({ providedIn: 'root' })
 export class PushNotificationsService {
-  private readonly http = inject(HttpClient);
-  private firebaseMessaging: any = null;
+  private readonly api = inject(ApiService);
+  private readonly platformId = inject(PLATFORM_ID);
   private initialized = false;
+  private subscriptionEndpoint: string | null = null;
 
   /**
-   * Inicializar Firebase Messaging y solicitar permisos.
-   *
-   * @returns Token FCM o null si falla
+   * Web Push estándar (VAPID) — sin Firebase.
+   * Registra la suscripción en /api/web/notifications/web-push/subscribe/
    */
-  async initialize(): Promise<string | null> {
-    if (this.initialized) {
-      console.warn('[PushNotifications] Already initialized');
-      return null;
-    }
+  async initialize(): Promise<boolean> {
+    if (!isPlatformBrowser(this.platformId)) return false;
+    if (this.initialized) return true;
 
-    // Verificar soporte de Service Worker
-    if (!('serviceWorker' in navigator)) {
-      console.warn('[PushNotifications] Service Worker not supported in this browser');
-      return null;
-    }
-
-    // Verificar soporte de Notification API
-    if (!('Notification' in window)) {
-      console.warn('[PushNotifications] Notification API not supported');
-      return null;
+    if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+      console.warn('[WebPush] No soportado en este navegador');
+      return false;
     }
 
     try {
-      // Importar Firebase dinámicamente
-      const { initializeApp } = await import('firebase/app');
-      const { getMessaging, getToken, onMessage } = await import('firebase/messaging');
-
-      // Configuración de Firebase (obtener de Firebase Console)
-      const firebaseConfig = {
-        apiKey: "AIzaSyBNJzKGl7Qx...", // TODO: Reemplazar con tu API Key
-        authDomain: "appemergenciasbeet.firebaseapp.com",
-        projectId: "appemergenciasbeet",
-        storageBucket: "appemergenciasbeet.firebasestorage.app",
-        messagingSenderId: "123456789", // TODO: Reemplazar
-        appId: "1:123456789:web:abc123" // TODO: Reemplazar
-      };
-
-      const app = initializeApp(firebaseConfig);
-      this.firebaseMessaging = getMessaging(app);
-
-      // Solicitar permisos de notificación
       const permission = await Notification.requestPermission();
-
       if (permission !== 'granted') {
-        console.warn('[PushNotifications] Permission denied');
-        return null;
+        console.warn('[WebPush] Permiso denegado');
+        return false;
       }
 
-      // Obtener token FCM
-      // VAPID Key: obtener de Firebase Console > Project Settings > Cloud Messaging > Web Push certificates
-      const token = await getToken(this.firebaseMessaging, {
-        vapidKey: 'YOUR_VAPID_KEY_HERE' // TODO: Reemplazar con tu VAPID Key
-      });
+      let publicKey = environment.webPushPublicKey?.trim() || '';
+      if (!publicKey) {
+        const res = await firstValueFrom(
+          this.api.get<{ public_key: string }>('/api/web/notifications/web-push/vapid-public-key/'),
+        );
+        publicKey = res.public_key;
+      }
 
-      if (token) {
-        console.log('[PushNotifications] FCM Token obtained:', token.substring(0, 20) + '...');
-
-        // Registrar token en backend
-        await this.registerTokenOnBackend(token);
-
-        // Escuchar mensajes cuando la app está en foreground
-        onMessage(this.firebaseMessaging, (payload) => {
-          console.log('[PushNotifications] Message received (foreground):', payload);
-          this.handleForegroundMessage(payload);
+      const registration = await navigator.serviceWorker.ready;
+      let sub = await registration.pushManager.getSubscription();
+      if (!sub) {
+        sub = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(publicKey) as BufferSource,
         });
-
-        this.initialized = true;
-        return token;
       }
 
-      return null;
-    } catch (error) {
-      console.error('[PushNotifications] Error initializing:', error);
-      return null;
-    }
-  }
+      const json = sub.toJSON();
+      const keys = json.keys;
+      if (!json.endpoint || !keys?.['p256dh'] || !keys?.['auth']) {
+        throw new Error('Suscripción push incompleta');
+      }
 
-  /**
-   * Registrar token FCM en el backend.
-   */
-  private async registerTokenOnBackend(token: string): Promise<void> {
-    try {
-      await this.http.post(`${environment.apiUrl}/api/web/auth/fcm-token/`, {
-        fcm_token: token
-      }).toPromise();
-      console.log('[PushNotifications] Token registered on backend');
-    } catch (error) {
-      console.error('[PushNotifications] Error registering token:', error);
-    }
-  }
+      await firstValueFrom(
+        this.api.post('/api/web/notifications/web-push/subscribe/', {
+          endpoint: json.endpoint,
+          keys: { p256dh: keys['p256dh'], auth: keys['auth'] },
+        }),
+      );
 
-  /**
-   * Manejar mensajes recibidos cuando la app está en foreground.
-   */
-  private handleForegroundMessage(payload: any): void {
-    const notificationTitle = payload.notification?.title || 'Nueva notificación';
-    const notificationOptions = {
-      body: payload.notification?.body || '',
-      icon: '/assets/icons/icon-192x192.png',
-      badge: '/assets/icons/icon-96x96.png',
-      data: payload.data || {},
-      requireInteraction: true,
-      tag: payload.data?.incident_id || 'default'
-    };
+      this.subscriptionEndpoint = json.endpoint;
+      this.initialized = true;
 
-    // Mostrar notificación nativa del navegador
-    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-      navigator.serviceWorker.ready.then((registration) => {
-        registration.showNotification(notificationTitle, notificationOptions);
+      navigator.serviceWorker.addEventListener('message', (ev: MessageEvent) => {
+        if (ev.data?.type === 'web_push' && Notification.permission === 'granted') {
+          const p = ev.data.payload as WebPushPayload;
+          this.showLocalNotification(p);
+        }
       });
+
+      return true;
+    } catch (error) {
+      console.warn('[WebPush] No se pudo activar:', error);
+      return false;
+    }
+  }
+
+  /** Notificación cuando la pestaña está activa (SSE complementario). */
+  showLocalNotification(payload: WebPushPayload): void {
+    if (!isPlatformBrowser(this.platformId) || Notification.permission !== 'granted') return;
+    const title = payload.title || 'Notificación';
+    const options: NotificationOptions = {
+      body: payload.body || '',
+      icon: '/favicon.ico',
+      data: payload.data,
+      tag: String(payload.data?.['incident_id'] ?? payload.data?.['type'] ?? 'panel'),
+    };
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      void navigator.serviceWorker.ready.then((reg) => reg.showNotification(title, options));
     } else {
-      new Notification(notificationTitle, notificationOptions);
+      new Notification(title, options);
     }
   }
 
-  /**
-   * Obtener token FCM actual (si ya fue inicializado).
-   */
-  async getCurrentToken(): Promise<string | null> {
-    if (!this.firebaseMessaging) {
-      return null;
-    }
-
-    try {
-      const { getToken } = await import('firebase/messaging');
-      return await getToken(this.firebaseMessaging);
-    } catch (error) {
-      console.error('[PushNotifications] Error getting token:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Cancelar token FCM (logout).
-   */
   async deleteToken(): Promise<void> {
-    if (!this.firebaseMessaging) {
-      return;
-    }
-
+    if (!isPlatformBrowser(this.platformId)) return;
     try {
-      const { deleteToken } = await import('firebase/messaging');
-      await deleteToken(this.firebaseMessaging);
-      this.initialized = false;
-      console.log('[PushNotifications] Token deleted');
-    } catch (error) {
-      console.error('[PushNotifications] Error deleting token:', error);
+      if (this.subscriptionEndpoint) {
+        await firstValueFrom(
+          this.api.post('/api/web/notifications/web-push/unsubscribe/', {
+            endpoint: this.subscriptionEndpoint,
+          }),
+        );
+      } else {
+        await firstValueFrom(this.api.post('/api/web/notifications/web-push/unsubscribe/', {}));
+      }
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      if (sub) await sub.unsubscribe();
+    } catch {
+      /* ignore */
     }
+    this.initialized = false;
+    this.subscriptionEndpoint = null;
   }
 }

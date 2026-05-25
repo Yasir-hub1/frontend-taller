@@ -49,6 +49,13 @@ export const ADMIN_ROUTES: Routes = [
         path: 'reportes',
         loadComponent: () => import('./reports/admin-reports.page').then((m) => m.AdminReportsPage),
       },
+      {
+        path: 'notificaciones',
+        loadComponent: () =>
+          import('../../shared/components/panel-notifications/panel-notifications.page').then(
+            (m) => m.PanelNotificationsPage,
+          ),
+      },
     ],
   },
 ];

@@ -53,8 +53,8 @@ export class CompleteIncidentDialog {
     const v = this.form.getRawValue();
     this.api
       .completeService(this.data.incidentId, v.service_cost, v.notes || undefined)
-      .subscribe(() => {
-        this.messages.success('Servicio completado');
+      .subscribe((res) => {
+        this.messages.mutationSuccess(res, 'Servicio completado');
         this.ref.close(true);
       });
   }

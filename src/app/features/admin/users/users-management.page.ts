@@ -100,8 +100,8 @@ export class UsersManagementPage implements OnInit {
   }
 
   toggle(u: User) {
-    this.api.toggleUserActive(u.id).subscribe(() => {
-      this.messages.success('Estado del usuario actualizado');
+    this.api.toggleUserActive(u.id).subscribe((res) => {
+      this.messages.mutationSuccess(res, 'Estado del usuario actualizado');
       this.load();
     });
   }

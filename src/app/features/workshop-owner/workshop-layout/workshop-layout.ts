@@ -14,6 +14,8 @@ import { Store } from '@ngrx/store';
 import { selectUnreadNotifications } from '../../../store/auth/auth.selectors';
 import { WorkshopOwnerService } from '../services/workshop-owner.service';
 import { WorkshopRealtimeService } from '../services/workshop-realtime.service';
+import { OfflineBannerComponent } from '../../../shared/components/offline-banner/offline-banner';
+import { ToolbarNotificationsComponent } from '../../../shared/components/toolbar-notifications/toolbar-notifications';
 
 @Component({
   standalone: true,
@@ -27,6 +29,8 @@ import { WorkshopRealtimeService } from '../services/workshop-realtime.service';
     MatToolbarModule,
     MatIconModule,
     MatButtonModule,
+    OfflineBannerComponent,
+    ToolbarNotificationsComponent,
   ],
   template: `
     <mat-sidenav-container class="shell">
@@ -82,6 +86,7 @@ import { WorkshopRealtimeService } from '../services/workshop-realtime.service';
             </button>
           }
           <span class="toolbar-fill"></span>
+          <app-toolbar-notifications />
           <span class="user-name">{{ auth.currentUser()?.first_name }}</span>
           <button mat-icon-button type="button" (click)="auth.logout()" aria-label="Salir">
             <mat-icon>logout</mat-icon>
@@ -106,6 +111,7 @@ import { WorkshopRealtimeService } from '../services/workshop-realtime.service';
             >
           </div>
         }
+        <app-offline-banner />
         <div class="content">
           <router-outlet />
         </div>
@@ -305,11 +311,11 @@ export class WorkshopLayoutComponent implements OnInit, OnDestroy {
   private refreshBanners() {
     this.workshops.getMyWorkshop().subscribe({
       next: (w) => {
-        this.bannerNoWorkshop = false;
-        this.bannerPendingVerification = !w.is_verified;
+        this.bannerNoWorkshop = w.id <= 0 && !this.workshops.hasPendingWorkshopSync();
+        this.bannerPendingVerification = w.id > 0 && !w.is_verified;
       },
       error: () => {
-        this.bannerNoWorkshop = true;
+        this.bannerNoWorkshop = !this.workshops.hasPendingWorkshopSync();
         this.bannerPendingVerification = false;
       },
     });

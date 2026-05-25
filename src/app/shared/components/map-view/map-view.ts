@@ -9,7 +9,7 @@ import {
   ViewChild,
   inject,
 } from '@angular/core';
-import * as L from 'leaflet';
+import { loadLeaflet } from '../../../core/utils/leaflet-browser';
 
 @Component({
   selector: 'app-map-view',
@@ -33,13 +33,13 @@ export class MapViewComponent implements AfterViewInit, OnDestroy {
   @Input() workshopLat: number | null = null;
   @Input() workshopLng: number | null = null;
 
-  private map: L.Map | null = null;
+  private map: import('leaflet').Map | null = null;
 
-  ngAfterViewInit() {
-    if (!isPlatformBrowser(this.platformId)) {
-      return;
-    }
-    fixLeafletIcons();
+  async ngAfterViewInit() {
+    if (!isPlatformBrowser(this.platformId)) return;
+    const L = await loadLeaflet(this.platformId);
+    if (!L) return;
+
     const lat = Number(this.incidentLat);
     const lng = Number(this.incidentLng);
     this.map = L.map(this.mapEl.nativeElement).setView([lat || -16.5, lng || -68.15], 13);
@@ -62,10 +62,7 @@ export class MapViewComponent implements AfterViewInit, OnDestroy {
         { color: '#1976d2', weight: 3, opacity: 0.7 },
       ).addTo(this.map);
       this.map.fitBounds(
-        L.latLngBounds(
-          L.latLng(lat, lng),
-          L.latLng(wl, wlng),
-        ),
+        L.latLngBounds(L.latLng(lat, lng), L.latLng(wl, wlng)),
         { padding: [40, 40] },
       );
     }
@@ -75,14 +72,4 @@ export class MapViewComponent implements AfterViewInit, OnDestroy {
     this.map?.remove();
     this.map = null;
   }
-}
-
-function fixLeafletIcons() {
-  const icon = L.Icon.Default.prototype as unknown as { _getIconUrl?: string };
-  delete icon._getIconUrl;
-  L.Icon.Default.mergeOptions({
-    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
-    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
-    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-  });
 }

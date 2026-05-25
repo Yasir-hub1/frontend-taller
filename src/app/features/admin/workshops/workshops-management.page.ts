@@ -94,15 +94,15 @@ export class WorkshopsManagementPage implements OnInit {
   }
 
   verify(w: Workshop) {
-    this.api.verifyWorkshop(w.id).subscribe(() => {
-      this.messages.success('Taller verificado');
+    this.api.verifyWorkshop(w.id).subscribe((res) => {
+      this.messages.mutationSuccess(res, 'Taller verificado');
       this.load();
     });
   }
 
   toggle(w: Workshop) {
-    this.api.toggleWorkshopActive(w.id).subscribe(() => {
-      this.messages.success('Estado del taller actualizado');
+    this.api.toggleWorkshopActive(w.id).subscribe((res) => {
+      this.messages.mutationSuccess(res, 'Estado del taller actualizado');
       this.load();
     });
   }

@@ -174,8 +174,8 @@ export class CommissionConfigPage implements OnInit {
         description: v.description,
         effective_from: v.effective_from,
       })
-      .subscribe(() => {
-        this.messages.success('Comisión guardada correctamente');
+      .subscribe((res) => {
+        this.messages.mutationSuccess(res, 'Comisión guardada correctamente');
         this.reload();
       });
   }

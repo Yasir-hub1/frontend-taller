@@ -1,3 +1,4 @@
+import { isPlatformBrowser } from '@angular/common';
 import {
   AfterViewInit,
   Component,
@@ -7,14 +8,18 @@ import {
   OnChanges,
   OnDestroy,
   Output,
+  PLATFORM_ID,
   SimpleChanges,
   ViewChild,
+  inject,
 } from '@angular/core';
-import * as L from 'leaflet';
+import { loadLeaflet } from '../../../../core/utils/leaflet-browser';
 
 /** Centro por defecto (La Paz, BO) */
 export const DEFAULT_WORKSHOP_LAT = -16.4897;
 export const DEFAULT_WORKSHOP_LNG = -68.1193;
+
+type LeafletModule = typeof import('leaflet');
 
 @Component({
   selector: 'app-workshop-location-picker',
@@ -65,6 +70,8 @@ export const DEFAULT_WORKSHOP_LNG = -68.1193;
 export class WorkshopLocationPickerComponent
   implements AfterViewInit, OnChanges, OnDestroy
 {
+  private readonly platformId = inject(PLATFORM_ID);
+
   @ViewChild('mapEl') mapEl!: ElementRef<HTMLDivElement>;
 
   @Input() lat = DEFAULT_WORKSHOP_LAT;
@@ -76,18 +83,26 @@ export class WorkshopLocationPickerComponent
 
   @Output() locationChange = new EventEmitter<{ lat: number; lng: number }>();
 
-  private map: L.Map | null = null;
-  private marker: L.Marker | null = null;
+  private L: LeafletModule | null = null;
+  private map: import('leaflet').Map | null = null;
+  private marker: import('leaflet').Marker | null = null;
 
   private static readonly ZOOM_SAVED = 16;
   private static readonly ZOOM_DEFAULT = 14;
 
-  ngAfterViewInit() {
-    fixLeafletIcons();
+  async ngAfterViewInit() {
+    if (!isPlatformBrowser(this.platformId)) return;
+    const L = await loadLeaflet(this.platformId);
+    if (!L) return;
+    this.L = L;
+
     const ilat = this.normLat(this.lat);
     const ilng = this.normLng(this.lng);
 
-    this.map = L.map(this.mapEl.nativeElement).setView([ilat, ilng], WorkshopLocationPickerComponent.ZOOM_DEFAULT);
+    this.map = L.map(this.mapEl.nativeElement).setView(
+      [ilat, ilng],
+      WorkshopLocationPickerComponent.ZOOM_DEFAULT,
+    );
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '&copy; OpenStreetMap',
@@ -100,7 +115,7 @@ export class WorkshopLocationPickerComponent
       this.emit(p.lat, p.lng);
     });
 
-    this.map.on('click', (e: L.LeafletMouseEvent) => {
+    this.map.on('click', (e: { latlng: { lat: number; lng: number } }) => {
       this.marker!.setLatLng(e.latlng);
       this.emit(e.latlng.lat, e.latlng.lng);
     });
@@ -147,6 +162,7 @@ export class WorkshopLocationPickerComponent
     this.map?.remove();
     this.map = null;
     this.marker = null;
+    this.L = null;
   }
 
   private normLat(v: number) {
@@ -164,14 +180,4 @@ export class WorkshopLocationPickerComponent
     const ln = Math.round(lng * 1e7) / 1e7;
     this.locationChange.emit({ lat: la, lng: ln });
   }
-}
-
-function fixLeafletIcons() {
-  const icon = L.Icon.Default.prototype as unknown as { _getIconUrl?: string };
-  delete icon._getIconUrl;
-  L.Icon.Default.mergeOptions({
-    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
-    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
-    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-  });
 }

@@ -27,6 +27,10 @@ export interface AdminReportsKpis {
   new_clients_in_period: number;
   new_workshops_in_period: number;
   verified_workshops_total: number;
+  sla_compliance_pct?: number | null;
+  sla_cases_measured?: number;
+  incidents_unattended?: number;
+  cancellation_rate_pct?: number;
 }
 
 export interface CountRow {
@@ -36,11 +40,30 @@ export interface CountRow {
   day?: string;
 }
 
+export interface WorkshopEfficiencyRow {
+  workshop_id: number;
+  name: string;
+  avg_response_seconds: number;
+  avg_arrival_seconds: number | null;
+  completed_count: number;
+  cases_count: number;
+}
+
+export interface GeoZoneRow {
+  zone_key: string;
+  latitude: number;
+  longitude: number;
+  label: string;
+  count: number;
+}
+
 export interface AdminReportsCharts {
   incidents_by_status: Array<{ status: string; count: number }>;
   incidents_by_type: Array<{ incident_type: string; count: number }>;
   incidents_by_day: Array<{ day: string; count: number }>;
   assignments_by_status: Array<{ status: string; count: number }>;
+  top_workshops_efficiency?: WorkshopEfficiencyRow[];
+  top_geo_zones?: GeoZoneRow[];
 }
 
 export interface TopWorkshopRow {

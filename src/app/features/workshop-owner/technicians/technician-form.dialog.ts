@@ -198,8 +198,9 @@ export class TechnicianFormDialog {
     }
 
     this.api.createTechnician(payload).subscribe({
-      next: () => {
-        this.messages.success(
+      next: (res) => {
+        this.messages.mutationSuccess(
+          res,
           v.enableAppAccess ? 'Técnico registrado con acceso a la app' : 'Técnico registrado',
         );
         this.ref.close(true);

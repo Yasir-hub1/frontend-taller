@@ -43,8 +43,8 @@ export class RejectIncidentDialog {
 
   save() {
     if (this.messages.showFormValidationWarning(this.form)) return;
-    this.api.rejectIncident(this.data.id, this.form.controls.reason.value).subscribe(() => {
-      this.messages.success('Incidente rechazado');
+    this.api.rejectIncident(this.data.id, this.form.controls.reason.value).subscribe((res) => {
+      this.messages.mutationSuccess(res, 'Incidente rechazado');
       this.ref.close(true);
     });
   }

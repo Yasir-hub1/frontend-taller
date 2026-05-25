@@ -1,4 +1,5 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, PLATFORM_ID, inject, signal } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter, map } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -9,6 +10,11 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { AuthService } from '../../../core/services/auth.service';
+import { OfflineBannerComponent } from '../../../shared/components/offline-banner/offline-banner';
+import { AdminRealtimeService } from '../services/admin-realtime.service';
+import { Store } from '@ngrx/store';
+import { selectUnreadNotifications } from '../../../store/auth/auth.selectors';
+import { ToolbarNotificationsComponent } from '../../../shared/components/toolbar-notifications/toolbar-notifications';
 
 @Component({
   standalone: true,
@@ -22,6 +28,8 @@ import { AuthService } from '../../../core/services/auth.service';
     MatToolbarModule,
     MatIconModule,
     MatButtonModule,
+    OfflineBannerComponent,
+    ToolbarNotificationsComponent,
   ],
   template: `
     <mat-sidenav-container class="shell">
@@ -42,7 +50,7 @@ import { AuthService } from '../../../core/services/auth.service';
         <mat-nav-list class="nav-list">
           <a mat-list-item routerLink="/admin/dashboard" routerLinkActive="active" (click)="closeNavMobile()">
             <mat-icon matListItemIcon>analytics</mat-icon>
-            <span matListItemTitle>Dashboard</span>
+            <span matListItemTitle>KPIs operativos</span>
           </a>
           <a mat-list-item routerLink="/admin/usuarios" routerLinkActive="active" (click)="closeNavMobile()">
             <mat-icon matListItemIcon>group</mat-icon>
@@ -68,6 +76,13 @@ import { AuthService } from '../../../core/services/auth.service';
             <mat-icon matListItemIcon>assessment</mat-icon>
             <span matListItemTitle>Reportes</span>
           </a>
+          <a mat-list-item routerLink="/admin/notificaciones" routerLinkActive="active" (click)="closeNavMobile()">
+            <mat-icon matListItemIcon>notifications</mat-icon>
+            <span matListItemTitle>Notificaciones</span>
+            @if (unread() > 0) {
+              <span class="nav-badge">{{ unread() }}</span>
+            }
+          </a>
         </mat-nav-list>
       </mat-sidenav>
       <mat-sidenav-content class="main">
@@ -78,11 +93,13 @@ import { AuthService } from '../../../core/services/auth.service';
             </button>
           }
           <span class="toolbar-fill"></span>
+          <app-toolbar-notifications />
           <span class="user-name">{{ auth.currentUser()?.first_name }}</span>
           <button mat-icon-button type="button" (click)="auth.logout()" aria-label="Salir">
             <mat-icon>logout</mat-icon>
           </button>
         </mat-toolbar>
+        <app-offline-banner />
         <div class="content admin-content"><router-outlet /></div>
       </mat-sidenav-content>
     </mat-sidenav-container>
@@ -186,12 +203,27 @@ import { AuthService } from '../../../core/services/auth.service';
       width: 100%;
       box-sizing: border-box;
     }
+    .nav-badge {
+      margin-left: auto;
+      background: #dc2626;
+      color: #fff;
+      border-radius: 999px;
+      padding: 0 7px;
+      font-size: 11px;
+      font-weight: 700;
+      min-width: 1.25rem;
+      text-align: center;
+    }
   `,
 })
-export class AdminLayoutComponent {
+export class AdminLayoutComponent implements OnInit, OnDestroy {
   readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly breakpoint = inject(BreakpointObserver);
+  private readonly realtime = inject(AdminRealtimeService);
+  private readonly store = inject(Store);
+  private readonly platformId = inject(PLATFORM_ID);
+  readonly unread = this.store.selectSignal(selectUnreadNotifications);
 
   readonly isMobile = toSignal(
     this.breakpoint.observe('(max-width: 959.98px)').pipe(map((r) => r.matches)),
@@ -206,6 +238,18 @@ export class AdminLayoutComponent {
       .subscribe(() => {
         if (this.isMobile()) this.sidenavOpen.set(false);
       });
+  }
+
+  ngOnInit() {
+    if (isPlatformBrowser(this.platformId)) {
+      void this.realtime.start();
+    }
+  }
+
+  ngOnDestroy() {
+    if (isPlatformBrowser(this.platformId)) {
+      this.realtime.stop();
+    }
   }
 
   onSidenavChange(opened: boolean): void {

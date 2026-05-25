@@ -5,11 +5,12 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatDialog } from '@angular/material/dialog';
 import { WorkshopOwnerService } from '../services/workshop-owner.service';
-import { Technician } from '../../../shared/models/workshop.model';
 import { MapViewComponent } from '../../../shared/components/map-view/map-view';
 import { TechnicianFormDialog } from './technician-form.dialog';
 import { TechnicianAppAccessDialog } from './technician-app-access.dialog';
 import { MessagesService } from '../../../core/services/messages.service';
+import { isQueuedResult } from '../../../core/models/offline.model';
+import { Technician } from '../../../shared/models/workshop.model';
 
 @Component({
   standalone: true,
@@ -135,17 +136,29 @@ export class TechnicianListPage implements OnInit {
   }
 
   toggle(t: Technician, v: boolean) {
-    this.api.patchAvailability(t.id, v).subscribe((u) => {
-      this.rows.update((list) => list.map((x) => (x.id === t.id ? { ...x, is_available: u.is_available } : x)));
-      this.messages.success('Disponibilidad actualizada');
+    this.api.patchAvailability(t.id, v).subscribe((res) => {
+      const available =
+        isQueuedResult(res) && 'technician' in res
+          ? res.technician.is_available
+          : isQueuedResult(res)
+            ? v
+            : (res as Technician).is_available;
+      this.rows.update((list) =>
+        list.map((x) => (x.id === t.id ? { ...x, is_available: available } : x)),
+      );
+      this.messages.mutationSuccess(res, 'Disponibilidad actualizada');
     });
   }
 
   remove(t: Technician) {
     if (!confirm('¿Eliminar técnico?')) return;
-    this.api.deleteTechnician(t.id).subscribe(() => {
-      this.messages.success('Técnico eliminado');
-      this.load();
+    this.api.deleteTechnician(t.id).subscribe((res) => {
+      this.messages.mutationSuccess(res, 'Técnico eliminado');
+      if (isQueuedResult(res)) {
+        this.rows.update((list) => list.filter((x) => x.id !== t.id));
+      } else {
+        this.load();
+      }
     });
   }
 

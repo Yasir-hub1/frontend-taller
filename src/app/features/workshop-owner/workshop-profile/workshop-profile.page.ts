@@ -17,6 +17,7 @@ import {
 import { ActivatedRoute } from '@angular/router';
 import { mediaUrl } from '../../../core/utils/media-url';
 import { MessagesService } from '../../../core/services/messages.service';
+import { isQueuedResult } from '../../../core/models/offline.model';
 
 const CATS: ServiceCategory[] = [
   'bateria',
@@ -71,6 +72,11 @@ const CATS: ServiceCategory[] = [
     }
     @if (route.snapshot.queryParamMap.get('need') === 'workshop') {
       <p class="alert-inline info">Registrá tu taller para acceder a todas las funciones del panel.</p>
+    }
+    @if (pendingSync) {
+      <p class="alert-inline info">
+        Cambios guardados sin conexión. Se enviarán al servidor cuando vuelva internet.
+      </p>
     }
     <mat-card class="mt app-surface-card profile-card">
       <mat-card-header class="profile-card-head">
@@ -173,7 +179,7 @@ const CATS: ServiceCategory[] = [
 
           <div class="form-actions">
             <button mat-flat-button color="primary" type="submit" [disabled]="saving">
-              {{ workshop ? 'Guardar cambios' : 'Crear taller' }}
+              {{ isRegistered || pendingSync ? 'Guardar cambios' : 'Crear taller' }}
             </button>
           </div>
         </form>
@@ -449,6 +455,11 @@ export class WorkshopProfilePage implements OnInit, OnDestroy {
   private readonly messages = inject(MessagesService);
 
   workshop: Workshop | null = null;
+  pendingSync = false;
+  /** Taller ya existe en el servidor (id > 0). */
+  get isRegistered(): boolean {
+    return !!this.workshop?.id && this.workshop.id > 0;
+  }
   cats = CATS;
   saving = false;
   logoFile: File | null = null;
@@ -481,25 +492,24 @@ export class WorkshopProfilePage implements OnInit, OnDestroy {
   });
 
   ngOnInit() {
+    this.pendingSync = this.api.hasPendingWorkshopSync();
     this.api.getMyWorkshop().subscribe({
       next: (w) => {
-        this.workshop = w;
-        this.logoFile = null;
-        this.clearLogoPreview();
-        this.form.patchValue({
-          name: w.name,
-          description: w.description,
-          address: w.address,
-          latitude: Number(w.latitude),
-          longitude: Number(w.longitude),
-          phone: w.phone,
-          email: w.email,
-          radius_km: w.radius_km,
-          services: (w.services as ServiceCategory[]) ?? [],
-        });
-        this.mapFitTrigger++;
+        this.workshop = w.id > 0 ? w : null;
+        this.pendingSync = this.api.hasPendingWorkshopSync() || w.id <= 0;
+        if (this.pendingSync && w.id <= 0) {
+          this.workshop = w;
+        }
+        this.applyWorkshopToForm(w);
       },
       error: () => {
+        const draft = this.api.getWorkshopDraft();
+        if (draft) {
+          this.workshop = draft.id > 0 ? draft : null;
+          this.pendingSync = true;
+          this.applyWorkshopToForm(draft);
+          return;
+        }
         this.workshop = null;
         this.logoFile = null;
         this.clearLogoPreview();
@@ -510,6 +520,23 @@ export class WorkshopProfilePage implements OnInit, OnDestroy {
         this.tryGeolocationForInitialCenter();
       },
     });
+  }
+
+  private applyWorkshopToForm(w: Workshop) {
+    this.logoFile = null;
+    this.clearLogoPreview();
+    this.form.patchValue({
+      name: w.name,
+      description: w.description,
+      address: w.address,
+      latitude: Number(w.latitude),
+      longitude: Number(w.longitude),
+      phone: w.phone,
+      email: w.email,
+      radius_km: w.radius_km,
+      services: (w.services as ServiceCategory[]) ?? [],
+    });
+    this.mapFitTrigger++;
   }
 
   ngOnDestroy() {
@@ -595,33 +622,36 @@ export class WorkshopProfilePage implements OnInit, OnDestroy {
 
     this.saving = true;
     const done = (w: Workshop) => {
-      this.workshop = w;
+      this.workshop = w.id > 0 ? w : this.workshop;
+      if (w.id > 0) this.workshop = w;
       this.logoFile = null;
       this.clearLogoPreview();
-      this.form.patchValue({
-        name: w.name,
-        description: w.description,
-        address: w.address,
-        latitude: Number(w.latitude),
-        longitude: Number(w.longitude),
-        phone: w.phone,
-        email: w.email,
-        radius_km: w.radius_km,
-        services: (w.services as ServiceCategory[]) ?? [],
-      });
-      this.mapFitTrigger++;
+      this.applyWorkshopToForm(w);
       this.saving = false;
-      this.messages.success(
-        wasNew ? 'Taller creado correctamente' : 'Taller actualizado correctamente',
-      );
     };
     const err = () => (this.saving = false);
 
-    if (this.workshop) {
-      this.api.updateWorkshopForm(fd).subscribe({ next: done, error: err });
-    } else {
-      this.api.createWorkshopForm(fd).subscribe({ next: done, error: err });
-    }
+    const mode = this.isRegistered ? 'update' : 'create';
+    this.api.saveWorkshopForm(mode, fd, this.logoFile, this.workshop).subscribe({
+      next: (res) => {
+        if (isQueuedResult(res) && 'workshop' in res) {
+          this.pendingSync = true;
+          done(res.workshop);
+          this.messages.mutationSuccess(
+            res,
+            wasNew ? 'Taller creado correctamente' : 'Taller actualizado correctamente',
+          );
+          return;
+        }
+        this.pendingSync = false;
+        done(res as Workshop);
+        this.messages.mutationSuccess(
+          res,
+          wasNew ? 'Taller creado correctamente' : 'Taller actualizado correctamente',
+        );
+      },
+      error: err,
+    });
   }
 
   protected readonly mediaUrl = mediaUrl;

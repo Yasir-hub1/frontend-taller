@@ -17,6 +17,9 @@ import { authReducer } from './store/auth/auth.reducer';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
 import { errorInterceptor } from './core/interceptors/error.interceptor';
 import { initAuth } from './core/init/auth.init';
+import { initOfflineSync } from './core/init/offline.init';
+import { OfflineSyncService } from './core/services/offline-sync.service';
+import { PanelNotificationsApiService } from './core/services/panel-notifications-api.service';
 import { HttpClient } from '@angular/common/http';
 import { StorageService } from './core/services/storage.service';
 import { Store } from '@ngrx/store';
@@ -41,7 +44,13 @@ export const appConfig: ApplicationConfig = {
     {
       provide: APP_INITIALIZER,
       useFactory: initAuth,
-      deps: [HttpClient, StorageService, Store],
+      deps: [HttpClient, StorageService, Store, PanelNotificationsApiService],
+      multi: true,
+    },
+    {
+      provide: APP_INITIALIZER,
+      useFactory: initOfflineSync,
+      deps: [OfflineSyncService],
       multi: true,
     },
   ],

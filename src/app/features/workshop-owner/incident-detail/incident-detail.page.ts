@@ -17,6 +17,7 @@ import { EvidenceGalleryComponent } from '../../../shared/components/evidence-ga
 import { AcceptIncidentDialog } from './accept-incident.dialog';
 import { CompleteIncidentDialog } from './complete-incident.dialog';
 import { RejectIncidentDialog } from '../incident-list/reject-incident.dialog';
+import { SendQuoteDialog } from './send-quote.dialog';
 import { Workshop } from '../../../shared/models/workshop.model';
 import { MessagesService } from '../../../core/services/messages.service';
 
@@ -84,7 +85,11 @@ import { MessagesService } from '../../../core/services/messages.service';
       <div class="actions mt">
         @if (asg === 'offered') {
           <button mat-flat-button color="primary" (click)="openAccept()">Aceptar</button>
+          <button mat-stroked-button (click)="openQuote()">Enviar cotización</button>
           <button mat-stroked-button color="warn" (click)="openReject()">Rechazar</button>
+        }
+        @if (asg === 'accepted' || asg === 'in_route' || asg === 'arrived' || asg === 'in_service') {
+          <button mat-stroked-button (click)="openQuote()">Actualizar cotización</button>
         }
         @if (asg === 'accepted' || asg === 'in_route' || asg === 'arrived' || asg === 'in_service') {
           <mat-form-field appearance="outline" class="status-field">
@@ -255,8 +260,8 @@ export class IncidentDetailPage implements OnInit {
   patchStatus() {
     if (!this.inc) return;
     this.api.updateStatus(this.inc.id, this.nextSt as 'in_route' | 'arrived' | 'in_service').subscribe({
-      next: () => {
-        this.messages.success('Estado actualizado');
+      next: (res) => {
+        this.messages.mutationSuccess(res, 'Estado actualizado');
         if (this.inc) {
           this.reload(this.inc.id, false);
         }
@@ -274,6 +279,14 @@ export class IncidentDetailPage implements OnInit {
       if (ok) {
         void this.router.navigate(['/taller/incidentes']);
       }
+    });
+  }
+
+  openQuote() {
+    if (!this.inc) return;
+    const ref = this.dialog.open(SendQuoteDialog, { data: { incidentId: this.inc.id } });
+    ref.afterClosed().subscribe((ok) => {
+      if (ok && this.inc) this.reload(this.inc.id, false);
     });
   }
 }

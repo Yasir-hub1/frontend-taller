@@ -6,18 +6,27 @@ import { StorageService } from '../services/storage.service';
 import { environment } from '../../../environments/environment';
 import { User } from '../../shared/models/user.model';
 import * as AuthActions from '../../store/auth/auth.actions';
+import { PanelNotificationsApiService } from '../services/panel-notifications-api.service';
 
 export function initAuth(
   http: HttpClient,
   storage: StorageService,
   store: Store,
+  notificationsApi: PanelNotificationsApiService,
 ) {
   return () => {
     const token = storage.get('access_token');
     if (!token) return Promise.resolve();
     return firstValueFrom(
       http.get<User>(`${environment.apiUrl}/api/web/auth/profile/`).pipe(
-        tap((user) => store.dispatch(AuthActions.setUser({ user }))),
+        tap((user) => {
+          store.dispatch(AuthActions.setUser({ user }));
+          notificationsApi.unreadCount().subscribe({
+            next: (r) =>
+              store.dispatch(AuthActions.setUnreadNotifications({ count: r.unread_count })),
+            error: () => undefined,
+          });
+        }),
         catchError(() => {
           storage.clear();
           store.dispatch(AuthActions.clearUser());

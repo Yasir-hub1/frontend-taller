@@ -11,6 +11,7 @@ import { CurrencyBoPipe } from '../../../shared/pipes/currency-bo.pipe';
 import { Technician } from '../../../shared/models/workshop.model';
 import { AvailableIncidentRow } from '../../../shared/models/incident.model';
 import { MessagesService } from '../../../core/services/messages.service';
+import { isQueuedResult } from '../../../core/models/offline.model';
 import { WorkshopRealtimeService } from '../services/workshop-realtime.service';
 import { MatIconModule } from '@angular/material/icon';
 import { Subscription } from 'rxjs';
@@ -249,9 +250,17 @@ export class WorkshopDashboardPage implements OnInit, OnDestroy {
   }
 
   toggleTech(t: Technician, v: boolean) {
-    this.api.patchAvailability(t.id, v).subscribe((updated) => {
-      this.techs.update((list) => list.map((x) => (x.id === t.id ? { ...x, is_available: updated.is_available } : x)));
-      this.messages.success('Disponibilidad actualizada');
+    this.api.patchAvailability(t.id, v).subscribe((res) => {
+      const available =
+        isQueuedResult(res) && 'technician' in res
+          ? res.technician.is_available
+          : isQueuedResult(res)
+            ? v
+            : (res as Technician).is_available;
+      this.techs.update((list) =>
+        list.map((x) => (x.id === t.id ? { ...x, is_available: available } : x)),
+      );
+      this.messages.mutationSuccess(res, 'Disponibilidad actualizada');
     });
   }
 }

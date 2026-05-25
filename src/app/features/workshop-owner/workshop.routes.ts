@@ -43,7 +43,9 @@ export const WORKSHOP_ROUTES: Routes = [
       {
         path: 'notificaciones',
         loadComponent: () =>
-          import('./notifications/notifications.page').then((m) => m.NotificationsPage),
+          import('../../shared/components/panel-notifications/panel-notifications.page').then(
+            (m) => m.PanelNotificationsPage,
+          ),
       },
     ],
   },
