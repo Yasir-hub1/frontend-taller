@@ -20,6 +20,8 @@ import { initAuth } from './core/init/auth.init';
 import { initOfflineSync } from './core/init/offline.init';
 import { OfflineSyncService } from './core/services/offline-sync.service';
 import { PanelNotificationsApiService } from './core/services/panel-notifications-api.service';
+import { PanelBackgroundNotificationsService } from './core/services/panel-background-notifications.service';
+import { initPanelBackgroundNotifications } from './core/init/panel-notifications.init';
 import { HttpClient } from '@angular/common/http';
 import { StorageService } from './core/services/storage.service';
 import { Store } from '@ngrx/store';
@@ -51,6 +53,12 @@ export const appConfig: ApplicationConfig = {
       provide: APP_INITIALIZER,
       useFactory: initOfflineSync,
       deps: [OfflineSyncService],
+      multi: true,
+    },
+    {
+      provide: APP_INITIALIZER,
+      useFactory: initPanelBackgroundNotifications,
+      deps: [PanelBackgroundNotificationsService],
       multi: true,
     },
   ],

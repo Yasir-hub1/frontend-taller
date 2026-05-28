@@ -47,13 +47,13 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const data = event.notification.data || {};
-  let path = '/taller/notificaciones';
+  let path = data.panel_path || '/taller/notificaciones';
   if (data.type === 'workshop_pending_review' || data.event === 'admin_new_incident') {
-    path = data.incident_id ? `/admin/incidentes/${data.incident_id}` : '/admin/talleres';
-  } else if (data.incident_id) {
+    path = data.panel_path || (data.incident_id ? `/admin/incidentes/${data.incident_id}` : '/admin/talleres');
+  } else if (data.incident_id && !String(path).startsWith('/admin')) {
     path = `/taller/incidentes/${data.incident_id}`;
   } else if (data.workshop_id && data.type === 'workshop_pending_review') {
-    path = '/admin/talleres';
+    path = data.panel_path || '/admin/talleres';
   }
 
   event.waitUntil(
