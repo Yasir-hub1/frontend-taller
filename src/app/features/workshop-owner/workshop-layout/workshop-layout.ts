@@ -61,6 +61,10 @@ import { ToolbarNotificationsComponent } from '../../../shared/components/toolba
             <mat-icon matListItemIcon>engineering</mat-icon>
             <span matListItemTitle>Técnicos</span>
           </a>
+          <a mat-list-item routerLink="/taller/suscripcion" routerLinkActive="active" (click)="closeNavMobile()">
+            <mat-icon matListItemIcon>card_membership</mat-icon>
+            <span matListItemTitle>Suscripción</span>
+          </a>
           <a mat-list-item routerLink="/taller/perfil" routerLinkActive="active" (click)="closeNavMobile()">
             <mat-icon matListItemIcon>storefront</mat-icon>
             <span matListItemTitle>Perfil taller</span>

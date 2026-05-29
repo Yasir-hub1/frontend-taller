@@ -10,8 +10,14 @@ export interface User {
   role: UserRole;
   avatar: string | null;
   is_verified: boolean;
-  owner_profile?: { id: number; national_id: string; stripe_account_id: string | null };
+  owner_profile?: {
+    id: number;
+    national_id: string;
+    stripe_customer_id?: string | null;
+    stripe_account_id: string | null;
+  };
   client_profile?: unknown;
+  subscription?: import('./subscription.model').OwnerSubscription | null;
 }
 
 export interface AuthTokens {
@@ -33,4 +39,5 @@ export interface RegisterWorkshopOwnerPayload {
   password: string;
   password_confirm: string;
   national_id: string;
+  subscription_plan_id: number;
 }

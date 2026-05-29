@@ -32,6 +32,11 @@ export const ADMIN_ROUTES: Routes = [
           import('./commission/commission-config.page').then((m) => m.CommissionConfigPage),
       },
       {
+        path: 'planes',
+        loadComponent: () =>
+          import('./subscription-plans/subscription-plans.page').then((m) => m.SubscriptionPlansPage),
+      },
+      {
         path: 'incidentes',
         loadComponent: () =>
           import('./incidents/all-incidents.page').then((m) => m.AllIncidentsPage),

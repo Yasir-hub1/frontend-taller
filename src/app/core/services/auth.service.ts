@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { tap } from 'rxjs/operators';
 import { User, AuthTokens, LoginPayload, RegisterWorkshopOwnerPayload } from '../../shared/models/user.model';
+import { OwnerSubscription, RegisterResponse } from '../../shared/models/subscription.model';
 import { StorageService } from './storage.service';
 import { environment } from '../../../environments/environment';
 import * as AuthActions from '../../store/auth/auth.actions';
@@ -41,13 +42,17 @@ export class AuthService {
 
   register(payload: RegisterWorkshopOwnerPayload) {
     return this.http
-      .post<{ tokens: AuthTokens; user: User }>(`${this.api}/api/web/auth/register/`, payload)
+      .post<RegisterResponse>(`${this.api}/api/web/auth/register/`, payload)
       .pipe(
         tap((res) => {
           this.storage.set('access_token', res.tokens.access);
           this.storage.set('refresh_token', res.tokens.refresh);
           this.store.dispatch(AuthActions.setUser({ user: res.user }));
           this.syncUnreadBadge();
+          if (res.checkout_url) {
+            window.location.href = res.checkout_url;
+            return;
+          }
           this.redirectByRole(res.user.role);
         }),
       );
@@ -63,8 +68,11 @@ export class AuthService {
 
   private redirectByRole(role: string) {
     if (role === 'admin') void this.router.navigate(['/admin/dashboard']);
-    else if (role === 'workshop_owner') void this.router.navigate(['/taller/dashboard']);
-    else void this.router.navigate(['/auth/login']);
+    else if (role === 'workshop_owner') {
+      const sub = this.currentUser()?.subscription;
+      if (sub?.is_operational) void this.router.navigate(['/taller/dashboard']);
+      else void this.router.navigate(['/taller/suscripcion']);
+    } else void this.router.navigate(['/auth/login']);
   }
 
   logout() {
@@ -83,5 +91,11 @@ export class AuthService {
       },
       error: () => this.logout(),
     });
+  }
+
+  patchSubscription(subscription: OwnerSubscription) {
+    const user = this.currentUser();
+    if (!user) return;
+    this.store.dispatch(AuthActions.setUser({ user: { ...user, subscription } }));
   }
 }

@@ -12,6 +12,7 @@ import { Workshop } from '../../../shared/models/workshop.model';
 import { CommissionConfig, GlobalMetrics, Payment } from '../../../shared/models/payment.model';
 import { Incident } from '../../../shared/models/incident.model';
 import { AdminReportsPayload } from '../../../shared/models/admin-reports.model';
+import { SubscriptionPlan } from '../../../shared/models/subscription.model';
 import { OperationalDashboardPayload } from '../../../shared/models/operational-dashboard.model';
 
 @Injectable({ providedIn: 'root' })
@@ -134,6 +135,18 @@ export class AdminService {
       '/api/admin-api/reports/',
       params,
     );
+  }
+
+  getSubscriptionPlans() {
+    return this.cachedGet<unknown>('admin:sub-plans', '/api/admin-api/subscription-plans/');
+  }
+
+  createSubscriptionPlan(body: Record<string, unknown>) {
+    return this.api.post<SubscriptionPlan>('/api/admin-api/subscription-plans/', body);
+  }
+
+  updateSubscriptionPlan(id: number, body: Record<string, unknown>) {
+    return this.api.patch<SubscriptionPlan>(`/api/admin-api/subscription-plans/${id}/`, body);
   }
 
   downloadReportsExcel(params?: Record<string, string>) {

@@ -1,15 +1,21 @@
 import { Routes } from '@angular/router';
 import { authGuard } from '../../core/guards/auth.guard';
 import { roleGuard } from '../../core/guards/role.guard';
+import { workshopSubscriptionGuard } from '../../core/guards/workshop-subscription.guard';
 import { WorkshopLayoutComponent } from './workshop-layout/workshop-layout';
 
 export const WORKSHOP_ROUTES: Routes = [
   {
     path: '',
     component: WorkshopLayoutComponent,
-    canActivate: [authGuard, roleGuard],
+    canActivate: [authGuard, roleGuard, workshopSubscriptionGuard],
     data: { roles: ['workshop_owner'] },
     children: [
+      {
+        path: 'suscripcion',
+        loadComponent: () =>
+          import('./subscription/workshop-subscription.page').then((m) => m.WorkshopSubscriptionPage),
+      },
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
       {
         path: 'dashboard',

@@ -64,6 +64,10 @@ import { ToolbarNotificationsComponent } from '../../../shared/components/toolba
             <mat-icon matListItemIcon>percent</mat-icon>
             <span matListItemTitle>Comisión</span>
           </a>
+          <a mat-list-item routerLink="/admin/planes" routerLinkActive="active" (click)="closeNavMobile()">
+            <mat-icon matListItemIcon>card_membership</mat-icon>
+            <span matListItemTitle>Planes suscripción</span>
+          </a>
           <a mat-list-item routerLink="/admin/incidentes" routerLinkActive="active" (click)="closeNavMobile()">
             <mat-icon matListItemIcon>warning</mat-icon>
             <span matListItemTitle>Incidentes</span>
