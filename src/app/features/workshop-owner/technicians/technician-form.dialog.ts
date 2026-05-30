@@ -17,16 +17,10 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { WorkshopOwnerService } from '../services/workshop-owner.service';
 import { ServiceCategory } from '../../../shared/models/workshop.model';
 import { MessagesService } from '../../../core/services/messages.service';
-
-const CATS: ServiceCategory[] = [
-  'bateria',
-  'llanta',
-  'remolque',
-  'motor',
-  'accidente',
-  'cerrajeria',
-  'general',
-];
+import {
+  WORKSHOP_SERVICE_CATEGORIES,
+  SERVICE_CATEGORY_LABELS,
+} from '../../../shared/constants/service-categories';
 
 @Component({
   standalone: true,
@@ -61,9 +55,10 @@ const CATS: ServiceCategory[] = [
         <mat-label>Especialidades</mat-label>
         <mat-select [formControl]="form.controls.specialties" multiple placeholder="Elegí una o más">
           @for (c of cats; track c) {
-            <mat-option [value]="c">{{ c }}</mat-option>
+            <mat-option [value]="c">{{ serviceLabels[c] }}</mat-option>
           }
         </mat-select>
+        <mat-hint>Mismos rubros que los servicios del taller y la app de emergencias (batería, motor, etc.).</mat-hint>
       </mat-form-field>
 
       <div class="app-access-block">
@@ -145,7 +140,8 @@ export class TechnicianFormDialog {
   private readonly fb = inject(FormBuilder);
   private readonly messages = inject(MessagesService);
 
-  readonly cats = CATS;
+  readonly cats = WORKSHOP_SERVICE_CATEGORIES;
+  readonly serviceLabels = SERVICE_CATEGORY_LABELS;
 
   form = this.fb.nonNullable.group({
     name: ['', Validators.required],

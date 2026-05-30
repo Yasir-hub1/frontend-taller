@@ -1,10 +1,11 @@
+/** Debe coincidir con apps.workshops.models.ServiceCategory (backend). */
 export type ServiceCategory =
-  | 'bateria'
-  | 'llanta'
-  | 'remolque'
-  | 'motor'
-  | 'accidente'
-  | 'cerrajeria'
+  | 'battery'
+  | 'tire'
+  | 'towing'
+  | 'engine'
+  | 'accident'
+  | 'locksmith'
   | 'general';
 
 export interface Workshop {

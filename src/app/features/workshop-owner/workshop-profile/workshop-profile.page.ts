@@ -10,6 +10,10 @@ import { MatIconModule } from '@angular/material/icon';
 import { WorkshopOwnerService } from '../services/workshop-owner.service';
 import { Workshop, ServiceCategory } from '../../../shared/models/workshop.model';
 import {
+  WORKSHOP_SERVICE_CATEGORIES,
+  SERVICE_CATEGORY_LABELS,
+} from '../../../shared/constants/service-categories';
+import {
   WorkshopLocationPickerComponent,
   DEFAULT_WORKSHOP_LAT,
   DEFAULT_WORKSHOP_LNG,
@@ -18,16 +22,6 @@ import { ActivatedRoute } from '@angular/router';
 import { mediaUrl } from '../../../core/utils/media-url';
 import { MessagesService } from '../../../core/services/messages.service';
 import { isQueuedResult } from '../../../core/models/offline.model';
-
-const CATS: ServiceCategory[] = [
-  'bateria',
-  'llanta',
-  'remolque',
-  'motor',
-  'accidente',
-  'cerrajeria',
-  'general',
-];
 
 @Component({
   standalone: true,
@@ -116,7 +110,7 @@ const CATS: ServiceCategory[] = [
             <mat-label>Servicios</mat-label>
             <mat-select formControlName="services" multiple>
               @for (c of cats; track c) {
-                <mat-option [value]="c">{{ c }}</mat-option>
+                <mat-option [value]="c">{{ serviceLabels[c] || c }}</mat-option>
               }
             </mat-select>
           </mat-form-field>
@@ -460,7 +454,8 @@ export class WorkshopProfilePage implements OnInit, OnDestroy {
   get isRegistered(): boolean {
     return !!this.workshop?.id && this.workshop.id > 0;
   }
-  cats = CATS;
+  cats = WORKSHOP_SERVICE_CATEGORIES;
+  readonly serviceLabels = SERVICE_CATEGORY_LABELS;
   saving = false;
   logoFile: File | null = null;
   logoPreviewUrl: string | null = null;

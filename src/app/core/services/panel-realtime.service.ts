@@ -1,10 +1,12 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { Subject } from 'rxjs';
 import { SseService } from './sse.service';
 import { PanelNotificationsApiService } from './panel-notifications-api.service';
 import { PushNotificationsService } from './push-notifications.service';
 import { MessagesService } from './messages.service';
+import { WorkshopOwnerService } from '../../features/workshop-owner/services/workshop-owner.service';
+import { selectUser } from '../../store/auth/auth.selectors';
 import * as AuthActions from '../../store/auth/auth.actions';
 
 /**
@@ -17,6 +19,8 @@ export class PanelRealtimeService {
   private readonly push = inject(PushNotificationsService);
   private readonly messages = inject(MessagesService);
   private readonly store = inject(Store);
+  private readonly workshopOwner = inject(WorkshopOwnerService);
+  private readonly ownerWorkshopIds = signal<number[]>([]);
 
   private destroy$ = new Subject<void>();
   private started = false;
@@ -28,6 +32,7 @@ export class PanelRealtimeService {
     this.started = true;
 
     this.refreshUnreadBadge();
+    this.loadOwnerWorkshopScope();
 
     this.sse.listenUserStream(this.destroy$).subscribe({
       next: (raw) => {
@@ -63,9 +68,54 @@ export class PanelRealtimeService {
     });
   }
 
+  private loadOwnerWorkshopScope(): void {
+    const user = this.store.selectSignal(selectUser)();
+    if (user?.role !== 'workshop_owner') {
+      this.ownerWorkshopIds.set([]);
+      return;
+    }
+    this.workshopOwner.getMyWorkshop().subscribe({
+      next: (w) => this.ownerWorkshopIds.set([w.id]),
+      error: () => this.ownerWorkshopIds.set([]),
+    });
+  }
+
+  /** Evita toasts/SSE de otro taller u otra cuenta en el mismo navegador. */
+  private shouldShowPanelEvent(data: Record<string, unknown>): boolean {
+    const user = this.store.selectSignal(selectUser)();
+    const ev = String(data['event'] ?? data['type'] ?? '');
+
+    if (user?.role === 'admin') {
+      const workshopOnly = [
+        'new_assignment_offer',
+        'new_rating',
+        'workshop_verified',
+        'payment_confirmed',
+      ];
+      return !workshopOnly.includes(ev);
+    }
+
+    if (user?.role === 'workshop_owner') {
+      const adminOnly = ['admin_new_incident', 'workshop_pending_review', 'incident_created'];
+      if (adminOnly.includes(ev)) return false;
+
+      const ws = data['workshop_id'];
+      if (ws !== undefined && ws !== null && ws !== '') {
+        const ids = this.ownerWorkshopIds();
+        if (ids.length && !ids.includes(Number(ws))) return false;
+      }
+    }
+
+    return true;
+  }
+
   private handleSsePayload(raw: string): void {
     try {
       const data = JSON.parse(raw) as Record<string, unknown>;
+      if (!this.shouldShowPanelEvent(data)) {
+        this.refreshUnreadBadge();
+        return;
+      }
       const title = typeof data['title'] === 'string' ? data['title'] : this.titleForEvent(data);
       const body = typeof data['body'] === 'string' ? data['body'] : this.bodyForEvent(data);
       if (title) {

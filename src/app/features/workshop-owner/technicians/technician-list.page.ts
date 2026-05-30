@@ -11,6 +11,7 @@ import { TechnicianAppAccessDialog } from './technician-app-access.dialog';
 import { MessagesService } from '../../../core/services/messages.service';
 import { isQueuedResult } from '../../../core/models/offline.model';
 import { Technician } from '../../../shared/models/workshop.model';
+import { formatServiceCategoryList } from '../../../shared/constants/service-categories';
 
 @Component({
   standalone: true,
@@ -37,7 +38,7 @@ import { Technician } from '../../../shared/models/workshop.model';
         </ng-container>
         <ng-container matColumnDef="spec">
           <th mat-header-cell *matHeaderCellDef>Especialidades</th>
-          <td mat-cell *matCellDef="let t">{{ t.specialties?.join(', ') }}</td>
+          <td mat-cell *matCellDef="let t">{{ formatSpecs(t.specialties) }}</td>
         </ng-container>
         <ng-container matColumnDef="av">
           <th mat-header-cell *matHeaderCellDef>Disponible</th>
@@ -133,6 +134,10 @@ export class TechnicianListPage implements OnInit {
 
   num(v: string | number | null) {
     return Number(v);
+  }
+
+  formatSpecs(specialties: string[] | null | undefined) {
+    return formatServiceCategoryList(specialties);
   }
 
   toggle(t: Technician, v: boolean) {

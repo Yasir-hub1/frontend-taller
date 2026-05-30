@@ -26,27 +26,60 @@ export class PushNotificationsService {
   private readonly platformId = inject(PLATFORM_ID);
   private initialized = false;
   private subscriptionEndpoint: string | null = null;
+  private deniedLogged = false;
+
+  /** true si el navegador puede usar notificaciones (aunque el permiso aún no esté concedido). */
+  isSupported(): boolean {
+    if (!isPlatformBrowser(this.platformId)) return false;
+    return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+  }
+
+  /** Estado actual del permiso del navegador. */
+  permissionState(): NotificationPermission | 'unsupported' {
+    if (!this.isSupported()) return 'unsupported';
+    return Notification.permission;
+  }
 
   /**
-   * Web Push estándar (VAPID) — sin Firebase.
-   * Registra la suscripción en /api/web/notifications/web-push/subscribe/
+   * Web Push (VAPID). Solo se activa si el permiso ya es "granted".
+   * No pide permiso al cargar la app (evita bloqueos y ruido en consola).
    */
   async initialize(): Promise<boolean> {
     if (!isPlatformBrowser(this.platformId)) return false;
     if (this.initialized) return true;
+    if (!this.isSupported()) return false;
 
-    if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
-      console.warn('[WebPush] No soportado en este navegador');
+    if (Notification.permission !== 'granted') {
       return false;
     }
 
-    try {
+    return this.subscribeAndRegister();
+  }
+
+  /**
+   * Pide permiso al usuario (debe llamarse desde un clic) y registra Web Push.
+   */
+  async requestPermissionAndInitialize(): Promise<boolean> {
+    if (!isPlatformBrowser(this.platformId)) return false;
+    if (!this.isSupported()) return false;
+    if (this.initialized) return true;
+
+    if (Notification.permission === 'denied') {
+      return false;
+    }
+
+    if (Notification.permission === 'default') {
       const permission = await Notification.requestPermission();
       if (permission !== 'granted') {
-        console.warn('[WebPush] Permiso denegado');
         return false;
       }
+    }
 
+    return this.subscribeAndRegister();
+  }
+
+  private async subscribeAndRegister(): Promise<boolean> {
+    try {
       let publicKey = environment.webPushPublicKey?.trim() || '';
       if (!publicKey) {
         const res = await firstValueFrom(
@@ -89,7 +122,10 @@ export class PushNotificationsService {
 
       return true;
     } catch (error) {
-      console.warn('[WebPush] No se pudo activar:', error);
+      if (!this.deniedLogged) {
+        this.deniedLogged = true;
+        console.warn('[WebPush] No se pudo activar:', error);
+      }
       return false;
     }
   }

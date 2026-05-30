@@ -13,7 +13,7 @@ import {
   ViewChild,
   inject,
 } from '@angular/core';
-import { loadLeaflet } from '../../../../core/utils/leaflet-browser';
+import { defaultMarkerIcon, loadLeaflet } from '../../../../core/utils/leaflet-browser';
 
 /** Centro por defecto (La Paz, BO) */
 export const DEFAULT_WORKSHOP_LAT = -16.4897;
@@ -92,36 +92,45 @@ export class WorkshopLocationPickerComponent
 
   async ngAfterViewInit() {
     if (!isPlatformBrowser(this.platformId)) return;
-    const L = await loadLeaflet(this.platformId);
-    if (!L) return;
-    this.L = L;
+    try {
+      const L = await loadLeaflet(this.platformId);
+      if (!L || !this.mapEl?.nativeElement) return;
+      this.L = L;
 
-    const ilat = this.normLat(this.lat);
-    const ilng = this.normLng(this.lng);
+      const ilat = this.normLat(this.lat);
+      const ilng = this.normLng(this.lng);
 
-    this.map = L.map(this.mapEl.nativeElement).setView(
-      [ilat, ilng],
-      WorkshopLocationPickerComponent.ZOOM_DEFAULT,
-    );
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '&copy; OpenStreetMap',
-    }).addTo(this.map);
+      this.map = L.map(this.mapEl.nativeElement).setView(
+        [ilat, ilng],
+        WorkshopLocationPickerComponent.ZOOM_DEFAULT,
+      );
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap',
+      }).addTo(this.map);
 
-    this.marker = L.marker([ilat, ilng], { draggable: true, autoPan: true }).addTo(this.map);
+      this.marker = L.marker([ilat, ilng], {
+        draggable: true,
+        autoPan: true,
+        icon: defaultMarkerIcon(L),
+      }).addTo(this.map);
 
-    this.marker.on('dragend', () => {
-      const p = this.marker!.getLatLng();
-      this.emit(p.lat, p.lng);
-    });
+      this.marker.on('dragend', () => {
+        const p = this.marker!.getLatLng();
+        this.emit(p.lat, p.lng);
+      });
 
-    this.map.on('click', (e: { latlng: { lat: number; lng: number } }) => {
-      this.marker!.setLatLng(e.latlng);
-      this.emit(e.latlng.lat, e.latlng.lng);
-    });
+      this.map.on('click', (e: { latlng: { lat: number; lng: number } }) => {
+        this.marker!.setLatLng(e.latlng);
+        this.emit(e.latlng.lat, e.latlng.lng);
+      });
 
-    if (this.compact) {
       setTimeout(() => this.map?.invalidateSize(), 0);
+      if (this.compact) {
+        setTimeout(() => this.map?.invalidateSize(), 200);
+      }
+    } catch {
+      /* mapa no disponible (SSR o error de carga) */
     }
   }
 
