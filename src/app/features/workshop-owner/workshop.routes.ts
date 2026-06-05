@@ -47,6 +47,11 @@ export const WORKSHOP_ROUTES: Routes = [
         loadComponent: () => import('./earnings/earnings.page').then((m) => m.EarningsPage),
       },
       {
+        path: 'reportes',
+        loadComponent: () =>
+          import('./reports/workshop-reports.page').then((m) => m.WorkshopReportsPage),
+      },
+      {
         path: 'notificaciones',
         loadComponent: () =>
           import('../../shared/components/panel-notifications/panel-notifications.page').then(

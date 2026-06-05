@@ -19,6 +19,8 @@ import { AdminReportsPayload } from '../../../shared/models/admin-reports.model'
 import { CurrencyBoPipe } from '../../../shared/pipes/currency-bo.pipe';
 import { asPaged } from '../utils/paginated-response.util';
 import { MessagesService } from '../../../core/services/messages.service';
+import { VoiceReportPanelComponent } from '../../../shared/components/voice-report/voice-report-panel';
+import { VoiceQueryResponse } from '../../../shared/models/voice-report.model';
 
 const CHART_COLORS = [
   '#6366f1',
@@ -52,6 +54,7 @@ const CHART_COLORS = [
     BaseChartDirective,
     CurrencyBoPipe,
     DatePipe,
+    VoiceReportPanelComponent,
   ],
   template: `
     <header class="app-page-head">
@@ -61,6 +64,14 @@ const CHART_COLORS = [
         creación del incidente; los montos corresponden a pagos liquidados vinculados a esos casos.
       </p>
     </header>
+
+    <app-voice-report-panel
+      title="Pedir reporte por voz"
+      description="Di qué necesitas y cuándo: «incidentes completados en marzo», «ingresos de esta semana», «talleres registrados en abril». El micrófono del navegador transcribe; si falla, usa Whisper en servidor."
+      [queryReport]="voiceQuery"
+      [exportReport]="voiceExport"
+      (applyToFullView)="onVoiceResult($event)"
+    />
 
     <mat-card class="app-surface-card filters-card">
       <mat-card-header>
@@ -496,6 +507,9 @@ export class AdminReportsPage implements OnInit {
   incCols = ['id', 'st', 'tp', 'cl', 'veh', 'ia', 'crt'];
   payCols = ['id', 'inc', 'ws', 'cl', 'tot', 'com', 'st', 'paid'];
 
+  readonly voiceQuery = (fd: FormData) => this.api.postVoiceQuery(fd);
+  readonly voiceExport = (filters: Record<string, string>) => this.api.downloadReportsExcel(filters);
+
   form = this.fb.nonNullable.group({
     date_from: '',
     date_to: '',
@@ -510,6 +524,20 @@ export class AdminReportsPage implements OnInit {
     this.resetDates();
     this.loadWorkshops();
     this.apply();
+  }
+
+  onVoiceResult(r: VoiceQueryResponse): void {
+    const rep = r.report as AdminReportsPayload;
+    this.report.set(rep);
+    this.patchCharts(rep);
+    this.form.patchValue({
+      date_from: r.filters.date_from ?? '',
+      date_to: r.filters.date_to ?? '',
+      workshop_id: r.filters.workshop_id ?? '',
+      incident_status: r.filters.incident_status ?? '',
+      incident_type: r.filters.incident_type ?? '',
+      payment_status: r.filters.payment_status ?? '',
+    });
   }
 
   resetDates(): void {

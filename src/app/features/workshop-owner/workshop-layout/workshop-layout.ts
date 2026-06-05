@@ -73,6 +73,10 @@ import { ToolbarNotificationsComponent } from '../../../shared/components/toolba
             <mat-icon matListItemIcon>payments</mat-icon>
             <span matListItemTitle>Ingresos</span>
           </a>
+          <a mat-list-item routerLink="/taller/reportes" routerLinkActive="active" (click)="closeNavMobile()">
+            <mat-icon matListItemIcon>record_voice_over</mat-icon>
+            <span matListItemTitle>Reportes IA</span>
+          </a>
           <a mat-list-item routerLink="/taller/notificaciones" routerLinkActive="active" (click)="closeNavMobile()">
             <mat-icon matListItemIcon>notifications</mat-icon>
             <span matListItemTitle>Notificaciones</span>

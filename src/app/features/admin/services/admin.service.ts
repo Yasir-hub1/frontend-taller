@@ -12,6 +12,7 @@ import { Workshop } from '../../../shared/models/workshop.model';
 import { CommissionConfig, GlobalMetrics, Payment } from '../../../shared/models/payment.model';
 import { Incident } from '../../../shared/models/incident.model';
 import { AdminReportsPayload } from '../../../shared/models/admin-reports.model';
+import { VoiceQueryResponse } from '../../../shared/models/voice-report.model';
 import { SubscriptionPlan } from '../../../shared/models/subscription.model';
 import { OperationalDashboardPayload } from '../../../shared/models/operational-dashboard.model';
 
@@ -135,6 +136,14 @@ export class AdminService {
       '/api/admin-api/reports/',
       params,
     );
+  }
+
+  /** Pide reporte por voz (audio o texto) → preview. */
+  postVoiceQuery(formData: FormData) {
+    if (!this.network.isOnline()) {
+      return throwError(() => new Error('El reporte por voz requiere conexión.'));
+    }
+    return this.api.postForm<VoiceQueryResponse>('/api/admin-api/reports/voice-query/', formData);
   }
 
   getSubscriptionPlans() {

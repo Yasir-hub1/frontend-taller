@@ -12,6 +12,7 @@ import {
 } from '../../../core/models/offline.model';
 import { WorkshopFormPayload, formDataToWorkshopPayload } from '../../../core/utils/offline-form.util';
 import { Workshop, Technician, ServiceCategory } from '../../../shared/models/workshop.model';
+import { VoiceQueryResponse } from '../../../shared/models/voice-report.model';
 
 /** DRF devuelve `{ count, results }` por paginación global; normaliza a array. */
 function unwrapTechnicianList(res: unknown): Technician[] {
@@ -245,6 +246,20 @@ export class WorkshopOwnerService {
           app_username: body.app_username,
         }),
     );
+  }
+
+  postVoiceQuery(formData: FormData) {
+    if (!this.network.isOnline()) {
+      return throwError(() => new Error('El reporte por voz requiere conexión.'));
+    }
+    return this.api.postForm<VoiceQueryResponse>('/api/web/workshop/reports/voice-query/', formData);
+  }
+
+  downloadReportsExcel(params?: Record<string, string>) {
+    if (!this.network.isOnline()) {
+      return throwError(() => new Error('La exportación Excel requiere conexión.'));
+    }
+    return this.api.getBlob('/api/web/workshop/reports/export/', params);
   }
 
   getWorkshopEarnings() {

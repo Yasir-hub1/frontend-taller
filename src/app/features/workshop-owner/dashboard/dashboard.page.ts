@@ -27,7 +27,10 @@ import { Subscription } from 'rxjs';
   template: `
     <header class="app-page-head">
       <h1 class="app-page-title">Dashboard</h1>
-      <p class="app-page-sub">Resumen de tu taller: cola, ingresos y equipo.</p>
+      <p class="app-page-sub">
+        Resumen de tu taller: cola, ingresos y equipo.
+        <a routerLink="/taller/reportes" class="dash-link">Pedir reporte por voz</a>
+      </p>
     </header>
     <div class="grid">
       <mat-card class="app-stat-card">
@@ -120,6 +123,14 @@ import { Subscription } from 'rxjs';
     }
   `,
   styles: `
+    .dash-link {
+      display: inline-block;
+      margin-left: 8px;
+      font-weight: 600;
+      color: var(--app-accent, #0d9488);
+      text-decoration: none;
+    }
+    .dash-link:hover { text-decoration: underline; }
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(min(100%, 148px), 1fr));
