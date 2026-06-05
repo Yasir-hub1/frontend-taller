@@ -106,8 +106,8 @@ import { formatServiceCategoryList } from '../../../shared/constants/service-cat
     }
     .mc p { font-weight: 600; font-size: 0.9rem; }
     .app-ok {
-      font-size: 0.85rem;
-      color: #0f766e;
+      font-size: 0.8125rem;
+      color: var(--app-accent-hover);
       font-weight: 600;
     }
   `,

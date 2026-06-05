@@ -127,11 +127,8 @@ import { Subscription } from 'rxjs';
     .stars { color: #f59e0b; letter-spacing: 1px; }
     .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0; }
     .full { width: 100%; }
-    .cell-actions { white-space: nowrap; }
-    .cell-actions a, .cell-actions button { margin: 2px 0; }
     @media (max-width: 700px) {
       .cell-actions { white-space: normal; }
-      .cell-actions a, .cell-actions button { display: inline-flex; margin: 4px 4px 4px 0; }
     }
   `,
 })

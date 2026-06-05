@@ -25,10 +25,10 @@ type LeafletModule = typeof import('leaflet');
   selector: 'app-workshop-location-picker',
   standalone: true,
   template: `
-    <div class="wrap" [class.compact]="compact">
+    <div class="wrap" [class.compact]="compact" [class.profile-layout]="profileLayout">
       @if (compact) {
         <p class="hint hint-compact">Clic o arrastrá el marcador para fijar el punto.</p>
-      } @else {
+      } @else if (!profileLayout) {
         <p class="hint">
           Usá «Centrar en mi ubicación» para acercarte a tu posición, o hacé clic en el mapa / arrastrá el
           marcador para fijar el taller.
@@ -56,14 +56,26 @@ type LeafletModule = typeof import('leaflet');
       height: clamp(220px, 42vh, 400px);
       min-height: 200px;
       width: 100%;
-      border-radius: var(--app-radius-sm, 10px);
-      border: 1px solid var(--app-border, #e2e8f0);
+      border-radius: var(--app-radius-sm, 12px);
+      border: 1px solid rgb(37 99 235 / 12%);
       z-index: 0;
       overflow: hidden;
+      box-shadow: inset 0 0 0 1px rgb(255 255 255 / 60%);
     }
     .wrap.compact .map {
       height: clamp(130px, 26vh, 200px);
       min-height: 120px;
+    }
+    .wrap.profile-layout .map {
+      height: clamp(260px, 42vh, 520px);
+      min-height: 240px;
+      border-radius: var(--app-radius, 16px);
+    }
+    @media (max-width: 839.98px) {
+      .wrap.profile-layout .map {
+        height: clamp(220px, 38vh, 360px);
+        min-height: 200px;
+      }
     }
   `,
 })
@@ -80,6 +92,8 @@ export class WorkshopLocationPickerComponent
   @Input() fitTrigger = 0;
   /** Mapa más bajo y texto breve (p. ej. formulario de perfil). */
   @Input() compact = false;
+  /** Mapa alto para panel lateral del perfil de taller. */
+  @Input() profileLayout = false;
 
   @Output() locationChange = new EventEmitter<{ lat: number; lng: number }>();
 
@@ -126,8 +140,11 @@ export class WorkshopLocationPickerComponent
       });
 
       setTimeout(() => this.map?.invalidateSize(), 0);
-      if (this.compact) {
+      if (this.compact || this.profileLayout) {
         setTimeout(() => this.map?.invalidateSize(), 200);
+        if (this.profileLayout) {
+          setTimeout(() => this.map?.invalidateSize(), 500);
+        }
       }
     } catch {
       /* mapa no disponible (SSR o error de carga) */
@@ -139,6 +156,11 @@ export class WorkshopLocationPickerComponent
 
     if (changes['compact'] && !changes['compact'].firstChange) {
       setTimeout(() => this.map?.invalidateSize(), 0);
+    }
+
+    if (changes['profileLayout'] && !changes['profileLayout'].firstChange) {
+      setTimeout(() => this.map?.invalidateSize(), 0);
+      setTimeout(() => this.map?.invalidateSize(), 250);
     }
 
     if (changes['fitTrigger'] && !changes['fitTrigger'].firstChange) {

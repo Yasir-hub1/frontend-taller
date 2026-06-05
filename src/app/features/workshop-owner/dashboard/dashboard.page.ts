@@ -25,7 +25,7 @@ import { Subscription } from 'rxjs';
     CurrencyBoPipe, RouterLink, MatIconModule,
   ],
   template: `
-    <header class="app-page-head">
+    <header class="app-page-head app-dashboard-head">
       <h1 class="app-page-title">Dashboard</h1>
       <p class="app-page-sub">Resumen de tu taller: cola, ingresos y equipo.</p>
     </header>
@@ -141,7 +141,7 @@ import { Subscription } from 'rxjs';
       display: flex; flex-direction: column; gap: 4px;
     }
     .link-list li:last-child { border-bottom: none; }
-    .link-list a { font-weight: 600; color: var(--app-accent, #0d9488); text-decoration: none; }
+    .link-list a { font-weight: 600; color: var(--app-accent); text-decoration: none; }
     .link-list a:hover { text-decoration: underline; }
     .meta { font-size: 0.8125rem; color: var(--app-text-muted, #64748b); }
     .tech {
@@ -235,7 +235,7 @@ export class WorkshopDashboardPage implements OnInit, OnDestroy {
       this.d.set(x);
       this.donutData.set({
         labels: ['Ofertadas', 'Activos', 'Completados mes'],
-        datasets: [{ data: [x.pending_requests, x.active_services, x.completed_this_month], backgroundColor: ['#f59e0b', '#0ea5e9', '#14b8a6'] }],
+        datasets: [{ data: [x.pending_requests, x.active_services, x.completed_this_month], backgroundColor: ['#f59e0b', '#3b82f6', '#2563eb'] }],
       });
     });
     this.incidents.getAvailableIncidents().subscribe((list) => this.recent.set(list.slice(0, 5)));
@@ -244,7 +244,7 @@ export class WorkshopDashboardPage implements OnInit, OnDestroy {
       const rp = e.recent_payments.slice(0, 6).reverse();
       this.barData.set({
         labels: rp.map((p) => '#' + p.incident_id),
-        datasets: [{ label: 'Neto taller', data: rp.map((p) => Number(p.net_amount)), backgroundColor: '#0d9488' }],
+        datasets: [{ label: 'Neto taller', data: rp.map((p) => Number(p.net_amount)), backgroundColor: '#2563eb' }],
       });
     });
   }

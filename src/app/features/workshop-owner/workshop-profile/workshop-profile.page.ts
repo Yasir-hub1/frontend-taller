@@ -41,402 +41,518 @@ import { isQueuedResult } from '../../../core/models/offline.model';
     WorkshopLocationPickerComponent,
   ],
   template: `
-    <header class="app-page-head profile-head">
-      <h1 class="app-page-title">Perfil del taller</h1>
-      <p class="app-page-sub profile-head-sub">
-        Datos para clientes y administración. Ubicación, servicios y logo.
-      </p>
-      @if (workshop) {
-        <p class="status-chip" [class.ok]="workshop.is_verified">
-          {{ workshop.is_verified ? 'Verificado' : 'Pendiente de verificación' }}
-        </p>
-        <div class="profile-rating-row">
-          <span class="profile-rating-label">Valoración</span>
-          <div class="stars-inline" [attr.aria-label]="'Promedio ' + ratingAvgLabel(workshop)">
-            @for (n of [1, 2, 3, 4, 5]; track n) {
-              <mat-icon [class.filled]="n <= ratingRoundedFor(workshop)">star</mat-icon>
-            }
-          </div>
-          <span class="profile-rating-num">{{ ratingAvgLabel(workshop) }}</span>
+    <div class="profile-page">
+      <header class="profile-hero">
+        <div class="profile-hero-main">
+          <h1 class="app-page-title">Perfil del taller</h1>
+          <p class="app-page-sub">
+            Datos visibles para clientes y administración: contacto, servicios, logo y ubicación.
+          </p>
         </div>
-      }
-    </header>
-    @if (route.snapshot.queryParamMap.get('pending') === 'verification') {
-      <p class="alert-inline warn">Tu taller aún no está verificado. Completá los datos con precisión.</p>
-    }
-    @if (route.snapshot.queryParamMap.get('need') === 'workshop') {
-      <p class="alert-inline info">Registrá tu taller para acceder a todas las funciones del panel.</p>
-    }
-    @if (pendingSync) {
-      <p class="alert-inline info">
-        Cambios guardados sin conexión. Se enviarán al servidor cuando vuelva internet.
-      </p>
-    }
-    <mat-card class="mt app-surface-card profile-card">
-      <mat-card-header class="profile-card-head">
-        <mat-card-title>Datos generales</mat-card-title>
-      </mat-card-header>
-      <mat-card-content class="profile-card-body">
-        <form [formGroup]="form" (ngSubmit)="save()" class="profile-form">
-          <mat-form-field appearance="outline" class="full" subscriptSizing="dynamic">
-            <mat-label>Nombre comercial</mat-label>
-            <input matInput formControlName="name" />
-          </mat-form-field>
-          <div class="form-grid-desc-addr">
-            <mat-form-field appearance="outline" class="full" subscriptSizing="dynamic">
-              <mat-label>Descripción</mat-label>
-              <textarea matInput rows="2" formControlName="description"></textarea>
-            </mat-form-field>
-            <mat-form-field appearance="outline" class="full" subscriptSizing="dynamic">
-              <mat-label>Dirección</mat-label>
-              <textarea matInput rows="2" formControlName="address"></textarea>
-            </mat-form-field>
-          </div>
-          <div class="form-row-contact">
-            <mat-form-field appearance="outline" class="full" subscriptSizing="dynamic">
-              <mat-label>Teléfono</mat-label>
-              <input matInput formControlName="phone" type="tel" />
-            </mat-form-field>
-            <mat-form-field appearance="outline" class="full" subscriptSizing="dynamic">
-              <mat-label>Email</mat-label>
-              <input matInput formControlName="email" type="email" />
-            </mat-form-field>
-            <mat-form-field appearance="outline" class="full field-radius" subscriptSizing="dynamic">
-              <mat-label>Radio (km)</mat-label>
-              <input matInput type="number" formControlName="radius_km" />
-            </mat-form-field>
-          </div>
-          <mat-form-field appearance="outline" class="full" subscriptSizing="dynamic">
-            <mat-label>Servicios</mat-label>
-            <mat-select formControlName="services" multiple>
-              @for (c of cats; track c) {
-                <mat-option [value]="c">{{ serviceLabels[c] || c }}</mat-option>
-              }
-            </mat-select>
-          </mat-form-field>
-
-          <div class="location-section">
-            <div class="location-head">
-              <h2 class="location-title">Ubicación</h2>
-              <button
-                mat-stroked-button
-                type="button"
-                color="primary"
-                class="btn-gps"
-                (click)="useMyLocation()"
-              >
-                Mi ubicación
-              </button>
-            </div>
-            <p class="location-desc">GPS o clic en el mapa para ajustar coordenadas.</p>
-            <app-workshop-location-picker
-              [compact]="true"
-              [lat]="num(form.controls.latitude.value)"
-              [lng]="num(form.controls.longitude.value)"
-              [fitTrigger]="mapFitTrigger"
-              (locationChange)="onLocationPicked($event)"
-            />
-            <div class="row-coords">
-              <mat-form-field appearance="outline" class="half" subscriptSizing="dynamic">
-                <mat-label>Latitud</mat-label>
-                <input matInput type="number" step="0.0000001" formControlName="latitude" />
-              </mat-form-field>
-              <mat-form-field appearance="outline" class="half" subscriptSizing="dynamic">
-                <mat-label>Longitud</mat-label>
-                <input matInput type="number" step="0.0000001" formControlName="longitude" />
-              </mat-form-field>
+        @if (workshop) {
+          <div class="profile-hero-meta">
+            <span class="status-chip" [class.ok]="workshop.is_verified">
+              <mat-icon aria-hidden="true">{{ workshop.is_verified ? 'verified' : 'hourglass_top' }}</mat-icon>
+              {{ workshop.is_verified ? 'Verificado' : 'Pendiente de verificación' }}
+            </span>
+            <div class="rating-chip">
+              <div class="stars-inline" [attr.aria-label]="'Promedio ' + ratingAvgLabel(workshop)">
+                @for (n of [1, 2, 3, 4, 5]; track n) {
+                  <mat-icon [class.filled]="n <= ratingRoundedFor(workshop)">star</mat-icon>
+                }
+              </div>
+              <span class="profile-rating-num">{{ ratingAvgLabel(workshop) }}</span>
             </div>
           </div>
+        }
+      </header>
 
-          <div class="logo-block">
-            <span class="logo-heading">Logo</span>
-            <div class="logo-row">
-              <input
-                #logoInput
-                type="file"
-                accept="image/*"
-                class="hidden-file"
-                (change)="onLogoSelected($event)"
-              />
-              <button mat-stroked-button type="button" (click)="logoInput.click()">Elegir</button>
-              @if (logoPreviewUrl || workshop?.logo) {
-                <div class="logo-thumb" title="Vista previa">
-                  <img
-                    [src]="logoPreviewUrl || mediaUrl(workshop?.logo ?? null)"
-                    alt="Logo del taller"
-                  />
-                </div>
-              }
-            </div>
-            <p class="hint-logo">JPG, PNG o WebP · opcional</p>
-          </div>
-
-          <div class="form-actions">
-            <button mat-flat-button color="primary" type="submit" [disabled]="saving">
-              {{ isRegistered || pendingSync ? 'Guardar cambios' : 'Crear taller' }}
-            </button>
-          </div>
-        </form>
-      </mat-card-content>
-    </mat-card>
-    <!-- <mat-card class="mt app-surface-card stripe-card profile-stripe">
-      <mat-card-header><mat-card-title>Pagos (Stripe)</mat-card-title></mat-card-header>
-      <mat-card-content>
-        <p class="muted">
-          La cuenta Stripe se configura en el backend. Cuando expongas el onboarding, definí
-          <code>environment.stripePublishableKey</code> en el front.
+      @if (route.snapshot.queryParamMap.get('pending') === 'verification') {
+        <p class="alert-inline warn">
+          <mat-icon aria-hidden="true">info</mat-icon>
+          Tu taller aún no está verificado. Completá los datos con precisión.
         </p>
-      </mat-card-content>
-    </mat-card> -->
+      }
+      @if (route.snapshot.queryParamMap.get('need') === 'workshop') {
+        <p class="alert-inline info">
+          <mat-icon aria-hidden="true">storefront</mat-icon>
+          Registrá tu taller para acceder a todas las funciones del panel.
+        </p>
+      }
+      @if (pendingSync) {
+        <p class="alert-inline info">
+          <mat-icon aria-hidden="true">cloud_off</mat-icon>
+          Cambios guardados sin conexión. Se enviarán al servidor cuando vuelva internet.
+        </p>
+      }
+
+      <form [formGroup]="form" (ngSubmit)="save()" class="profile-form">
+        <div class="profile-layout">
+          <mat-card class="app-surface-card profile-panel profile-panel--data">
+            <mat-card-header>
+              <mat-card-title>
+                <mat-icon aria-hidden="true">store</mat-icon>
+                Datos generales
+              </mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
+              <mat-form-field appearance="outline" class="full" subscriptSizing="dynamic">
+                <mat-label>Nombre comercial</mat-label>
+                <input matInput formControlName="name" />
+              </mat-form-field>
+
+              <div class="field-grid field-grid--2">
+                <mat-form-field appearance="outline" class="full" subscriptSizing="dynamic">
+                  <mat-label>Descripción</mat-label>
+                  <textarea matInput rows="3" formControlName="description"></textarea>
+                </mat-form-field>
+                <mat-form-field appearance="outline" class="full" subscriptSizing="dynamic">
+                  <mat-label>Dirección</mat-label>
+                  <textarea matInput rows="3" formControlName="address"></textarea>
+                </mat-form-field>
+              </div>
+
+              <div class="field-grid field-grid--3">
+                <mat-form-field appearance="outline" class="full" subscriptSizing="dynamic">
+                  <mat-label>Teléfono</mat-label>
+                  <input matInput formControlName="phone" type="tel" />
+                </mat-form-field>
+                <mat-form-field appearance="outline" class="full" subscriptSizing="dynamic">
+                  <mat-label>Email</mat-label>
+                  <input matInput formControlName="email" type="email" />
+                </mat-form-field>
+                <mat-form-field appearance="outline" class="full" subscriptSizing="dynamic">
+                  <mat-label>Radio de cobertura (km)</mat-label>
+                  <input matInput type="number" formControlName="radius_km" />
+                </mat-form-field>
+              </div>
+
+              <mat-form-field appearance="outline" class="full" subscriptSizing="dynamic">
+                <mat-label>Servicios que ofrece el taller</mat-label>
+                <mat-select formControlName="services" multiple>
+                  @for (c of cats; track c) {
+                    <mat-option [value]="c">{{ serviceLabels[c] || c }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+
+              <div class="logo-block">
+                <div class="logo-block-head">
+                  <mat-icon aria-hidden="true">image</mat-icon>
+                  <div>
+                    <span class="logo-heading">Logo del taller</span>
+                    <p class="hint-logo">JPG, PNG o WebP · opcional</p>
+                  </div>
+                </div>
+                <div class="logo-row">
+                  <input
+                    #logoInput
+                    type="file"
+                    accept="image/*"
+                    class="hidden-file"
+                    (change)="onLogoSelected($event)"
+                  />
+                  @if (logoPreviewUrl || workshop?.logo) {
+                    <div class="logo-thumb" title="Vista previa">
+                      <img
+                        [src]="logoPreviewUrl || mediaUrl(workshop?.logo ?? null)"
+                        alt="Logo del taller"
+                      />
+                    </div>
+                  } @else {
+                    <div class="logo-placeholder" aria-hidden="true">
+                      <mat-icon>add_photo_alternate</mat-icon>
+                    </div>
+                  }
+                  <button mat-stroked-button type="button" (click)="logoInput.click()">
+                    {{ logoPreviewUrl || workshop?.logo ? 'Cambiar logo' : 'Elegir imagen' }}
+                  </button>
+                </div>
+              </div>
+            </mat-card-content>
+          </mat-card>
+
+          <mat-card class="app-surface-card profile-panel profile-panel--map">
+            <mat-card-header>
+              <mat-card-title>
+                <mat-icon aria-hidden="true">location_on</mat-icon>
+                Ubicación
+              </mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
+              <p class="location-desc">
+                Marcá en el mapa dónde opera tu taller. Podés usar GPS o arrastrar el pin.
+              </p>
+              <div class="map-toolbar">
+                <button mat-stroked-button type="button" color="primary" (click)="useMyLocation()">
+                  <mat-icon>my_location</mat-icon>
+                  Usar mi ubicación
+                </button>
+              </div>
+
+              <app-workshop-location-picker
+                [profileLayout]="true"
+                [lat]="num(form.controls.latitude.value)"
+                [lng]="num(form.controls.longitude.value)"
+                [fitTrigger]="mapFitTrigger"
+                (locationChange)="onLocationPicked($event)"
+              />
+
+              <div class="coords-grid">
+                <mat-form-field appearance="outline" class="full" subscriptSizing="dynamic">
+                  <mat-label>Latitud</mat-label>
+                  <input matInput type="number" step="0.0000001" formControlName="latitude" />
+                </mat-form-field>
+                <mat-form-field appearance="outline" class="full" subscriptSizing="dynamic">
+                  <mat-label>Longitud</mat-label>
+                  <input matInput type="number" step="0.0000001" formControlName="longitude" />
+                </mat-form-field>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        </div>
+
+        <div class="form-actions">
+          <button mat-flat-button color="primary" type="submit" [disabled]="saving">
+            <mat-icon>{{ isRegistered || pendingSync ? 'save' : 'add_business' }}</mat-icon>
+            {{ saving ? 'Guardando…' : isRegistered || pendingSync ? 'Guardar cambios' : 'Crear taller' }}
+          </button>
+        </div>
+      </form>
+    </div>
   `,
   styles: `
-    .profile-head {
-      margin-bottom: 0.85rem;
+    .profile-page {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      max-width: 1200px;
+      margin: 0 auto;
     }
-    .profile-head-sub {
-      font-size: 0.8125rem;
-      max-width: 40rem;
+
+    .profile-hero {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
     }
+
+    .profile-hero-main .app-page-title {
+      background: linear-gradient(135deg, var(--app-text) 0%, var(--app-accent) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      margin-bottom: 0.3rem;
+    }
+
+    .profile-hero-main .app-page-sub {
+      max-width: 46ch;
+      margin: 0;
+    }
+
+    .profile-hero-meta {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 0.55rem;
+    }
+
+    @media (max-width: 639.98px) {
+      .profile-hero-meta {
+        align-items: flex-start;
+        width: 100%;
+      }
+    }
+
     .status-chip {
-      display: inline-block;
-      margin: 0.35rem 0 0;
-      padding: 0.25rem 0.65rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.35rem 0.75rem;
       border-radius: 999px;
       font-size: 0.75rem;
       font-weight: 600;
-      background: var(--app-warn-bg, #fff7ed);
-      color: var(--app-warn-text, #9a3412);
+      background: var(--app-warn-bg);
+      color: var(--app-warn-text);
+      border: 1px solid rgb(251 146 60 / 22%);
     }
+
+    .status-chip .mat-icon {
+      width: 16px;
+      height: 16px;
+      font-size: 16px;
+    }
+
     .status-chip.ok {
-      background: var(--app-accent-soft, #ccfbf1);
-      color: var(--app-accent-hover, #0f766e);
+      background: var(--app-accent-soft);
+      color: var(--app-accent-hover);
+      border-color: rgb(37 99 235 / 18%);
     }
-    .profile-rating-row {
-      display: flex;
-      flex-wrap: wrap;
+
+    .rating-chip {
+      display: inline-flex;
       align-items: center;
-      gap: 0.5rem 0.75rem;
-      margin-top: 0.65rem;
+      gap: 0.5rem;
+      padding: 0.35rem 0.75rem;
+      border-radius: 999px;
+      background: rgb(255 255 255 / 65%);
+      border: 1px solid rgb(37 99 235 / 10%);
+      backdrop-filter: blur(8px);
     }
-    .profile-rating-label {
-      font-size: 0.75rem;
-      font-weight: 600;
-      color: var(--app-text-muted, #64748b);
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
+
     .stars-inline {
       display: flex;
-      gap: 2px;
+      gap: 1px;
       align-items: center;
     }
+
     .stars-inline mat-icon {
-      font-size: 20px;
-      width: 20px;
-      height: 20px;
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
       color: #cbd5e1;
     }
+
     .stars-inline mat-icon.filled {
       color: #fbbf24;
     }
+
     .profile-rating-num {
-      font-size: 0.9375rem;
-      font-weight: 700;
-      color: var(--app-text, #0f172a);
-    }
-    .alert-inline {
-      padding: 0.5rem 0.75rem;
-      border-radius: var(--app-radius-sm, 10px);
       font-size: 0.8125rem;
-      line-height: 1.4;
-      margin: 0 0 0.65rem;
+      font-weight: 700;
+      color: var(--app-text);
     }
-    .alert-inline.warn {
-      background: var(--app-warn-bg, #fff7ed);
-      color: var(--app-warn-text, #9a3412);
-      border: 1px solid rgb(251 146 60 / 22%);
-    }
-    .alert-inline.info {
-      background: var(--app-info-bg, #eff6ff);
-      color: var(--app-info-text, #1d4ed8);
-      border: 1px solid rgb(59 130 246 / 18%);
-    }
-    .profile-card .profile-card-head {
-      padding-bottom: 0;
-    }
-    .profile-card .mat-mdc-card-title {
-      font-size: 1rem;
-    }
-    .profile-card-body {
-      padding-top: 0.5rem !important;
-    }
-    .profile-form .full {
-      width: 100%;
-      display: block;
-    }
-    .profile-form mat-form-field {
-      margin-bottom: 0.15rem;
-    }
-    .form-grid-desc-addr {
-      display: grid;
-      gap: 0 0.75rem;
-      margin-bottom: 0.15rem;
-    }
-    @media (min-width: 720px) {
-      .form-grid-desc-addr {
-        grid-template-columns: 1fr 1fr;
-      }
-    }
-    .form-row-contact {
-      display: grid;
-      gap: 0 0.75rem;
-      margin-bottom: 0.15rem;
-    }
-    @media (min-width: 600px) {
-      .form-row-contact {
-        grid-template-columns: 1fr 1fr minmax(5.5rem, 6.5rem);
-      }
-    }
-    .field-radius {
-      max-width: none;
-    }
-    @media (max-width: 599.98px) {
-      .field-radius {
-        max-width: 8rem;
-      }
-    }
-    .row-coords {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0 0.75rem;
-      margin-top: 0.35rem;
-    }
-    @media (max-width: 520px) {
-      .row-coords {
-        grid-template-columns: 1fr;
-      }
-    }
-    .half {
-      width: 100%;
-    }
-    .mt {
-      margin-top: 0.85rem;
-    }
-    .muted {
-      color: var(--app-text-muted, #64748b);
+
+    .alert-inline {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      padding: 0.65rem 0.85rem;
+      border-radius: var(--app-radius-sm);
       font-size: 0.8125rem;
       line-height: 1.45;
       margin: 0;
     }
-    .profile-stripe .mat-mdc-card-header {
-      padding-bottom: 0;
+
+    .alert-inline .mat-icon {
+      flex-shrink: 0;
+      width: 18px;
+      height: 18px;
+      font-size: 18px;
+      margin-top: 1px;
     }
-    .profile-stripe .mat-mdc-card-content {
-      padding-top: 0.35rem !important;
+
+    .alert-inline.warn {
+      background: var(--app-warn-bg);
+      color: var(--app-warn-text);
+      border: 1px solid rgb(251 146 60 / 22%);
     }
-    .stripe-card code {
-      font-size: 0.8em;
-      padding: 0.15em 0.4em;
-      border-radius: 6px;
-      background: var(--app-bg-elevated, #f8fafc);
+
+    .alert-inline.info {
+      background: var(--app-info-bg);
+      color: var(--app-info-text);
+      border: 1px solid rgb(59 130 246 / 18%);
     }
-    .hidden-file {
-      display: none;
+
+    .profile-layout {
+      display: grid;
+      gap: 1rem;
+      align-items: start;
     }
+
+    @media (min-width: 960px) {
+      .profile-layout {
+        grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+      }
+
+      .profile-panel--map {
+        position: sticky;
+        top: 72px;
+      }
+    }
+
+    .profile-panel .mat-mdc-card-title {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 1rem;
+    }
+
+    .profile-panel .mat-mdc-card-title .mat-icon {
+      width: 20px;
+      height: 20px;
+      font-size: 20px;
+      color: var(--app-accent);
+    }
+
+    .profile-form .full {
+      width: 100%;
+      display: block;
+    }
+
+    .profile-form mat-form-field {
+      margin-bottom: 0.1rem;
+    }
+
+    .field-grid {
+      display: grid;
+      gap: 0 0.75rem;
+      margin-bottom: 0.15rem;
+    }
+
+    @media (min-width: 720px) {
+      .field-grid--2 {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (min-width: 640px) {
+      .field-grid--3 {
+        grid-template-columns: 1fr 1fr minmax(7rem, 9rem);
+      }
+    }
+
+    @media (max-width: 639.98px) {
+      .field-grid--3 {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .field-grid--3 mat-form-field:last-child {
+        grid-column: 1 / -1;
+      }
+    }
+
+    .location-desc {
+      margin: 0 0 0.65rem;
+      font-size: 0.8125rem;
+      color: var(--app-text-muted);
+      line-height: 1.45;
+    }
+
+    .map-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 0.65rem;
+    }
+
+    .map-toolbar button mat-icon {
+      width: 18px;
+      height: 18px;
+      font-size: 18px;
+      margin-right: 4px;
+    }
+
+    .coords-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0 0.75rem;
+      margin-top: 0.75rem;
+    }
+
+    @media (max-width: 480px) {
+      .coords-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
     .logo-block {
-      margin: 0.65rem 0 0.35rem;
-      padding: 0.65rem 0.75rem;
-      border: 1px solid var(--app-border, #e2e8f0);
-      border-radius: var(--app-radius-sm, 10px);
-      background: var(--app-bg-elevated, #f8fafc);
+      margin-top: 0.75rem;
+      padding: 0.85rem;
+      border: 1px solid rgb(37 99 235 / 10%);
+      border-radius: var(--app-radius-sm);
+      background: rgb(255 255 255 / 45%);
     }
+
+    .logo-block-head {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      margin-bottom: 0.65rem;
+    }
+
+    .logo-block-head .mat-icon {
+      width: 20px;
+      height: 20px;
+      font-size: 20px;
+      color: var(--app-accent);
+      margin-top: 2px;
+    }
+
     .logo-heading {
       display: block;
-      font-size: 0.75rem;
+      font-size: 0.8125rem;
       font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--app-text-muted, #64748b);
-      margin-bottom: 0.4rem;
+      color: var(--app-text);
     }
+
+    .hint-logo {
+      font-size: 0.6875rem;
+      color: var(--app-text-muted);
+      margin: 0.15rem 0 0;
+    }
+
     .logo-row {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      gap: 0.5rem 0.75rem;
+      gap: 0.75rem;
     }
-    .logo-thumb {
-      width: 48px;
-      height: 48px;
+
+    .logo-thumb,
+    .logo-placeholder {
+      width: 64px;
+      height: 64px;
       flex-shrink: 0;
-      border-radius: 8px;
-      border: 1px solid var(--app-border, #e2e8f0);
+      border-radius: 12px;
+      border: 1px solid rgb(37 99 235 / 12%);
       background: #fff;
       display: flex;
       align-items: center;
       justify-content: center;
       overflow: hidden;
     }
+
+    .logo-placeholder .mat-icon {
+      color: var(--app-text-muted);
+      opacity: 0.55;
+    }
+
     .logo-thumb img {
       max-width: 100%;
       max-height: 100%;
-      width: auto;
-      height: auto;
       object-fit: contain;
-      display: block;
     }
-    .hint-logo {
-      font-size: 0.6875rem;
-      color: var(--app-text-muted, #64748b);
-      margin: 0.35rem 0 0;
+
+    .hidden-file {
+      display: none;
     }
-    .location-section {
-      margin: 0.65rem 0 0.35rem;
-      padding: 0.6rem 0.65rem;
-      border: 1px solid var(--app-border, #e2e8f0);
-      border-radius: var(--app-radius-sm, 10px);
-      background: var(--app-bg-elevated, #f8fafc);
-    }
-    .location-head {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.35rem 0.75rem;
-      margin-bottom: 0.25rem;
-    }
-    .location-title {
-      margin: 0;
-      font-size: 0.875rem;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-    }
-    .btn-gps {
-      flex-shrink: 0;
-      font-size: 0.8125rem;
-      line-height: 1.2;
-      min-height: 36px;
-      padding: 0 0.75rem;
-    }
-    .location-desc {
-      margin: 0 0 0.35rem;
-      font-size: 0.75rem;
-      color: var(--app-text-muted, #64748b);
-      line-height: 1.35;
-    }
+
     .form-actions {
-      margin-top: 0.75rem;
-      padding-top: 0.25rem;
+      display: flex;
+      justify-content: flex-end;
+      padding: 0.25rem 0 0.5rem;
     }
+
     .form-actions button {
       width: 100%;
-      min-height: 44px;
+      min-height: 46px;
       font-weight: 600;
+      border-radius: 12px !important;
     }
-    @media (min-width: 480px) {
+
+    .form-actions button mat-icon {
+      width: 20px;
+      height: 20px;
+      font-size: 20px;
+      margin-right: 4px;
+    }
+
+    @media (min-width: 520px) {
       .form-actions button {
         width: auto;
-        min-width: 180px;
+        min-width: 200px;
       }
     }
   `,
